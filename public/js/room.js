@@ -347,7 +347,10 @@
 
     User.prototype.writeChatData = function(val) {
       var e, message, text, urlRegex, _i, _len;
-      this.chatData.push(val);
+      this.chatData.push({
+        name: val.name,
+        text: unescape(val.text)
+      });
       text = val.text.split(' ');
       if (text[0] === "/serv") {
         this.displayChatMessage(this.notifyTemplate({

@@ -176,7 +176,7 @@ class User
           self.applyClassFilter("Blur", ".#{streamConnection}")
           self.session.forceDisconnect( streamConnection.split("stream")[1] )
   writeChatData: (val) =>
-    @chatData.push( val )
+    @chatData.push( {name: val.name, text: unescape(val.text) } )
     text = val.text.split(' ')
     if text[0] == "/serv"
       @displayChatMessage( @notifyTemplate( {message: val.text.split("/serv")[1] } ) )
