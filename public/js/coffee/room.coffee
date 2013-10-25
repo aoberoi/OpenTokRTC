@@ -182,9 +182,9 @@ class User
       @displayChatMessage( @notifyTemplate( {message: val.text.split("/serv")[1] } ) )
       return
     message = ""
-    urlRegex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/g
+    urlRegex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z]{2,6})(\/.*)?$/g
     for e in text
-      if e.match( urlRegex ) and e.split("..").length < 2 and e[e.length-1] != "."
+      if e.length<2000 and e.match( urlRegex ) and e.split("..").length < 2 and e[e.length-1] != "."
         message += e.replace( urlRegex,"<a href='http://$2.$3$4' target='_blank'>$1$2.$3$4<a>" )+" "
       else
         message += Handlebars.Utils.escapeExpression(e) + " "
