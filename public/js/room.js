@@ -71,6 +71,7 @@
       this.chatData = [];
       this.filterData = {};
       this.allUsers = {};
+      this.printCommands();
       this.publisher = TB.initPublisher(this.apiKey, "myPublisher", {
         width: 240,
         height: 190
@@ -107,7 +108,6 @@
     }
 
     User.prototype.sessionConnectedHandler = function(event) {
-      var _this = this;
       console.log("session connected");
       this.subscribeStreams(event.streams);
       this.session.publish(this.publisher);
@@ -116,21 +116,7 @@
       this.name = "Guest-" + (this.myConnectionId.substring(this.myConnectionId.length - 8, this.myConnectionId.length));
       this.allUsers[this.myConnectionId] = this.name;
       $("#messageInput").removeAttr("disabled");
-      $('#messageInput').focus();
-      return setTimeout(function() {
-        _this.displayChatMessage(_this.notifyTemplate({
-          message: "-----------"
-        }));
-        _this.displayChatMessage(_this.notifyTemplate({
-          message: "Welcome to OpenTokRTC."
-        }));
-        _this.displayChatMessage(_this.notifyTemplate({
-          message: "Type /nick <value> to change your name"
-        }));
-        return _this.displayChatMessage(_this.notifyTemplate({
-          message: "-----------"
-        }));
-      }, 2000);
+      return $('#messageInput').focus();
     };
 
     User.prototype.sessionDisconnectedHandler = function(event) {
@@ -246,7 +232,15 @@
           return;
         }
         parts = text.split(' ');
+        if (parts[0] === "/help") {
+          this.printCommands();
+          $('#messageInput').val('');
+          return;
+        }
         if (parts[0] === "/list") {
+          this.displayChatMessage(this.notifyTemplate({
+            message: "-----------"
+          }));
           this.displayChatMessage(this.notifyTemplate({
             message: "Users currently in the room"
           }));
@@ -258,7 +252,7 @@
             }));
           }
           this.displayChatMessage(this.notifyTemplate({
-            message: "---- the end ----"
+            message: "-----------"
           }));
           $('#messageInput').val('');
           return;
@@ -378,6 +372,27 @@
     User.prototype.displayChatMessage = function(message) {
       $("#displayChat").append(message);
       return $('#displayChat')[0].scrollTop = $('#displayChat')[0].scrollHeight;
+    };
+
+    User.prototype.printCommands = function() {
+      this.displayChatMessage(this.notifyTemplate({
+        message: "-----------"
+      }));
+      this.displayChatMessage(this.notifyTemplate({
+        message: "Welcome to OpenTokRTC."
+      }));
+      this.displayChatMessage(this.notifyTemplate({
+        message: "Type /nick your_name to change your name"
+      }));
+      this.displayChatMessage(this.notifyTemplate({
+        message: "Type /list to see list of users in the room"
+      }));
+      this.displayChatMessage(this.notifyTemplate({
+        message: "Type /help to see a list of commands"
+      }));
+      return this.displayChatMessage(this.notifyTemplate({
+        message: "-----------"
+      }));
     };
 
     return User;
