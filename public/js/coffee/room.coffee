@@ -13,6 +13,7 @@ class User
     @chatData = []
     @filterData = {}
     @allUsers = {}
+    @printCommands() # welcome users into the room
 
     # set up OpenTok
     @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:240, height:190} )
@@ -52,12 +53,6 @@ class User
     @allUsers[ @myConnectionId ] = @name
     $("#messageInput").removeAttr( "disabled" )
     $('#messageInput').focus()
-    setTimeout =>
-      @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
-      @displayChatMessage( @notifyTemplate( {message: "Welcome to OpenTokRTC."} ) )
-      @displayChatMessage( @notifyTemplate( {message: "Type /nick <value> to change your name"} ) )
-      @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
-    , 2000
   sessionDisconnectedHandler: (event) =>
     console.log event.reason
     if( event.reason == "forceDisconnected" )
@@ -118,11 +113,16 @@ class User
       text = $('#messageInput').val().trim()
       if text.length < 1 then return
       parts = text.split(' ')
+      if parts[0] == "/help"
+        @printCommands()
+        $('#messageInput').val('')
+        return
       if parts[0] == "/list"
+        @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
         @displayChatMessage( @notifyTemplate( {message: "Users currently in the room"} ) )
         for k,v of @allUsers
           @displayChatMessage( @notifyTemplate( {message: "- #{v}" } ) )
-        @displayChatMessage( @notifyTemplate( {message: "---- the end ----"} ) )
+        @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
         $('#messageInput').val('')
         return
       if parts[0] == "/name" or parts[0] == "/nick"
@@ -193,4 +193,11 @@ class User
   displayChatMessage: (message)->
     $("#displayChat").append message
     $('#displayChat')[0].scrollTop = $('#displayChat')[0].scrollHeight
+  printCommands: ->
+    @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Welcome to OpenTokRTC."} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Type /nick your_name to change your name"} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Type /list to see list of users in the room"} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Type /help to see a list of commands"} ) )
+    @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
 window.User = User
