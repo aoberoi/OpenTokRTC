@@ -9,57 +9,24 @@ class User
     @notifyTemplate = Handlebars.compile( $("#notifyTemplate").html() )
 
     # variables
-    @takenNames = {}
-
-    # Creating data references
-    @roomRef = new Firebase("https://rtcdemo.firebaseIO.com/room/#{@rid}")
-    @chatRef = new Firebase("https://rtcdemo.firebaseIO.com/room/#{@rid}/chat/")
-    @usersRef = new Firebase("https://rtcdemo.firebaseIO.com/room/#{@rid}/users/")
-
-    @usersRef.on "child_added", (childSnapshot, prevChildName) =>
-      @takenNames[childSnapshot.val().name] = true
-      @displayChatMessage( @notifyTemplate( {message: "#{childSnapshot.val().name} has joined the room" } ) )
-    @usersRef.on "child_removed", (childSnapshot) =>
-      @takenNames[childSnapshot.val().name] = false
-      @displayChatMessage( @notifyTemplate( {message: "#{childSnapshot.val().name} has left the room" } ) )
-
-    @usersRef.on "child_changed", (childSnapshot, prevChildName) =>
-      console.log childSnapshot.name()
-      val = childSnapshot.val()
-      if val.filter
-        self.applyClassFilter( val.filter, ".stream#{childSnapshot.name()}" )
-      @takenNames[childSnapshot.val().name] = true
-
-    # set up session id for the room
-    @roomRef.once 'value', (snapshot) =>
-      if !snapshot.child("sid").val()
-        snapshot.child("sid").ref().set( @sid )
-
-    # set up message input
-    @chatRef.on 'child_added', (snapshot) =>
-      val = snapshot.val()
-      text = val.text.split(' ')
-      if text[0] == "/serv"
-        @displayChatMessage( @notifyTemplate( {message: val.text.split("/serv")[1] } ) )
-        return
-      message = ""
-      urlRegex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/g
-      for e in text
-        if e.match( urlRegex ) and e.split("..").length < 2 and e[e.length-1] != "."
-          message += e.replace( urlRegex,"<a href='http://$2.$3$4' target='_blank'>$1$2.$3$4<a>" )+" "
-        else
-          message += Handlebars.Utils.escapeExpression(e) + " "
-      val.text = message
-      @displayChatMessage( @messageTemplate( val ) )
-    $('#messageInput').keypress @inputKeypress
+    @initialized = false
+    @chatData = []
+    @filterData = {}
+    @allUsers = {}
 
     # set up OpenTok
     @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:240, height:190} )
     @session = TB.initSession( @sid )
     @session.on( "sessionConnected", @sessionConnectedHandler )
+    @session.on( "sessionDisconnected", @sessionDisconnectedHandler )
     @session.on( "streamCreated", @streamCreatedHandler )
     @session.on( "streamDestroyed", @streamDestroyedHandler )
-    @session.on( "sessionDisconnected", @sessionDisconnectedHandler )
+    @session.on( "connectionCreated", @connectionCreatedHandler )
+    @session.on( "connectionDestroyed", @connectionDestroyedHandler )
+    @session.on( "signal:initialize", @signalInitializeHandler )
+    @session.on( "signal:chat", @signalChatHandler )
+    @session.on( "signal:filter", @signalFilterHandler )
+    @session.on( "signal:name", @signalNameHandler )
     @session.connect( @apiKey, @token )
 
     # add event listeners
@@ -69,62 +36,26 @@ class User
       prop = $(@).data('value')
       self.applyClassFilter( prop, "#myPublisher" )
       $(@).addClass("optionSelected")
-      self.presenceRef.child("filter").set prop
+      self.session.signal( {type: "filter", data: {cid: self.session.connection.connectionId, filter: prop }}, self.errorSignal )
+      self.filterData[self.session.connection.connectionId] = prop
+    $('#messageInput').keypress @inputKeypress
 
-  applyClassFilter: (prop, selector) ->
-    $(selector).removeClass( "Blur Sepia Grayscale Invert" )
-    $(selector).addClass( prop )
-    console.log "applyclassfilter..."+prop
-
-  removeStream: (cid) =>
-    element$ = $(".stream#{cid}")
-    element$.remove()
-  subscribeStreams: (streams) =>
-    for stream in streams
-      streamConnectionId = stream.connection.connectionId
-      if @session.connection.connectionId == streamConnectionId
-        return
-      # create new div container for stream
-      divId = "stream#{streamConnectionId}"
-      $("#streams_container").append( @userStreamTemplate({ id: divId }) )
-      @session.subscribe( stream, divId , {width:240, height:190} )
-
-      divId$ = $(".#{divId}")
-      divId$.mouseenter ->
-        $(@).find('.flagUser').show()
-      divId$.mouseleave ->
-        $(@).find('.flagUser').hide()
-
-      self = @
-      divId$.find('.flagUser').click ->
-        streamConnection = $(@).data('streamconnection')
-        if confirm("Is this user being inappropriate? If so, we are sorry that you had to go through that. Click confirm to remove user")
-          self.applyClassFilter("Blur", ".#{streamConnection}")
-          self.session.forceDisconnect( streamConnection.split("stream")[1] )
-
-      # Apply any existing filters to the video element
-      streamRef = new Firebase("https://rtcdemo.firebaseIO.com/room/#{@rid}/users/#{streamConnectionId}/filter")
-      streamRef.once 'value', (dataSnapshot) =>
-        val = dataSnapshot.val()
-        @applyClassFilter( val, ".stream#{streamConnectionId}" )
+  # session and signaling events
   sessionConnectedHandler: (event) =>
     console.log "session connected"
     @subscribeStreams(event.streams)
     @session.publish( @publisher )
     ResizeLayoutContainer()
 
-    date = "#{Date.now()}"
-    @name = "Guest#{date.substring( date.length - 8, date.length )}"
     @myConnectionId = @session.connection.connectionId
-    @presenceRef = new Firebase("https://rtcdemo.firebaseIO.com/room/#{@rid}/users/#{@myConnectionId}")
-    @presenceRef.child("name").set @name
-    @presenceRef.onDisconnect().remove()
+    @name = "Guest-#{@myConnectionId.substring( @myConnectionId.length - 8, @myConnectionId.length )}"
+    @allUsers[ @myConnectionId ] = @name
     $("#messageInput").removeAttr( "disabled" )
     $('#messageInput').focus()
     setTimeout =>
       @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
       @displayChatMessage( @notifyTemplate( {message: "Welcome to OpenTokRTC."} ) )
-      @displayChatMessage( @notifyTemplate( {message: "Type /name <value> to change your name"} ) )
+      @displayChatMessage( @notifyTemplate( {message: "Type /nick <value> to change your name"} ) )
       @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
     , 2000
   sessionDisconnectedHandler: (event) =>
@@ -134,32 +65,131 @@ class User
     else
       alert "You have been disconnected! Please try again"
     window.location = "/"
+  streamCreatedHandler: (event) =>
+    console.log "streamCreated"
+    @subscribeStreams(event.streams)
+    ResizeLayoutContainer()
   streamDestroyedHandler: (event) =>
     for stream in event.streams
       if @session.connection.connectionId == stream.connection.connectionId
         return
       @removeStream( stream.connection.connectionId )
     ResizeLayoutContainer()
-  streamCreatedHandler: (event) =>
-    console.log "streamCreated"
-    @subscribeStreams(event.streams)
-    ResizeLayoutContainer()
+  connectionCreatedHandler: ( event ) =>
+    console.log "new connection created"
+    cid = "#{event.connections[0].id}"
+    guestName = "Guest-#{cid.substring( cid.length - 8, cid.length )}"
+    console.log "signaling over!"
+    console.log @allUsers
+    @session.signal( { type: "initialize", to: event.connections, data: {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3]}}, @errorSignal )
+    @allUsers[cid] = guestName
+    @displayChatMessage( @notifyTemplate( {message: "#{guestName} has joined the room" } ) )
+    console.log "signal new connection room info"
+  connectionDestroyedHandler: ( event ) =>
+    cid = "#{event.connections[0].id}"
+    @displayChatMessage( @notifyTemplate( {message: "#{@allUsers[cid]} has left the room" } ) )
+    delete @allUsers[cid]
+  signalInitializeHandler: ( event ) =>
+    console.log "initialize handler"
+    console.log event.data
+    if @initialized then return
+    for k,v of event.data.users
+      @allUsers[k] = v
+    for k,v of event.data.filter
+      @filterData[k] = v
+    for e in event.data.chat
+      @writeChatData( e )
+    @initialized = true
+  signalChatHandler: ( event ) =>
+    @writeChatData( event.data )
+  signalFilterHandler: ( event ) =>
+    val = event.data
+    console.log "filter received"
+    @applyClassFilter( val.filter, ".stream#{val.cid}" )
+  signalNameHandler: ( event ) =>
+    console.log "name signal received"
+    console.log event.data
+    @allUsers[ event.data[0] ] = event.data[1]
+
+  # events
   inputKeypress: (e) =>
+    msgData = {}
     if (e.keyCode == 13)
       text = $('#messageInput').val().trim()
-      if text.length < 1
-        return
+      if text.length < 1 then return
       parts = text.split(' ')
-      if parts[0] == "/name"
-        if @takenNames[parts[1]]
-          alert("Sorry, but that name has already been taken.")
-          return
-        @chatRef.push({name: @name, text: "/serv #{@name} is now known as #{parts[1]}"})
+      if parts[0] == "/list"
+        @displayChatMessage( @notifyTemplate( {message: "Users currently in the room"} ) )
+        for k,v of @allUsers
+          @displayChatMessage( @notifyTemplate( {message: "- #{v}" } ) )
+        @displayChatMessage( @notifyTemplate( {message: "---- the end ----"} ) )
+        $('#messageInput').val('')
+        return
+      if parts[0] == "/name" or parts[0] == "/nick"
+        for k, v of @allUsers
+          if v == parts[1] or parts[1].length <= 2
+            alert("Sorry, but that name has already been taken or is too short.")
+            return
+        msgData = {name: parts[1], text: "/serv #{@name} is now known as #{parts[1]}"}
+        @session.signal( {type: "name", data: [@myConnectionId, parts[1]]}, @errorSignal )
         @name = parts[1]
-        @presenceRef.child("name").set @name
       else
-        @chatRef.push({name: @name, text: text})
+        msgData = {name: @name, text: text}
       $('#messageInput').val('')
+      @session.signal( {type: "chat", data: msgData}, @errorSignal )
+
+  # helpers
+  errorSignal: (error) =>
+    if (error)
+      console.log("signal error: " + error.reason)
+  applyClassFilter: (prop, selector) =>
+    if prop
+      $(selector).removeClass( "Blur Sepia Grayscale Invert" )
+      $(selector).addClass( prop )
+      console.log "applyclassfilter..."+prop
+  removeStream: (cid) =>
+    element$ = $(".stream#{cid}")
+    element$.remove()
+  subscribeStreams: (streams) =>
+    for stream in streams
+      streamConnectionId = stream.connection.connectionId
+      if @session.connection.connectionId == streamConnectionId
+        return
+      # create new div container for stream, subscribe, apply filter
+      divId = "stream#{streamConnectionId}"
+      $("#streams_container").append( @userStreamTemplate({ id: divId }) )
+      @session.subscribe( stream, divId , {width:240, height:190} )
+      @applyClassFilter( @filterData[ streamConnectionId ], ".stream#{streamConnectionId}" )
+
+      # bindings to mark offensive users
+      divId$ = $(".#{divId}")
+      divId$.mouseenter ->
+        $(@).find('.flagUser').show()
+      divId$.mouseleave ->
+        $(@).find('.flagUser').hide()
+
+      # mark user as offensive
+      self = @
+      divId$.find('.flagUser').click ->
+        streamConnection = $(@).data('streamconnection')
+        if confirm("Is this user being inappropriate? If so, we are sorry that you had to go through that. Click confirm to remove user")
+          self.applyClassFilter("Blur", ".#{streamConnection}")
+          self.session.forceDisconnect( streamConnection.split("stream")[1] )
+  writeChatData: (val) =>
+    @chatData.push( val )
+    text = val.text.split(' ')
+    if text[0] == "/serv"
+      @displayChatMessage( @notifyTemplate( {message: val.text.split("/serv")[1] } ) )
+      return
+    message = ""
+    urlRegex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/g
+    for e in text
+      if e.match( urlRegex ) and e.split("..").length < 2 and e[e.length-1] != "."
+        message += e.replace( urlRegex,"<a href='http://$2.$3$4' target='_blank'>$1$2.$3$4<a>" )+" "
+      else
+        message += Handlebars.Utils.escapeExpression(e) + " "
+    val.text = message
+    @displayChatMessage( @messageTemplate( val ) )
   displayChatMessage: (message)->
     $("#displayChat").append message
     $('#displayChat')[0].scrollTop = $('#displayChat')[0].scrollHeight

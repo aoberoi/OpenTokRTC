@@ -33,11 +33,12 @@ app.get("/", function( req, res ){
   }
 });
 
-var presenceListener = {};
+var rooms = {};
 
 app.get("/:rid", function( req, res ){
   // make sure that we are always in https
-  if(req.header('x-forwarded-proto')!="https" == "production" ){
+  console.log( req.url );
+  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
     res.redirect( 'https://opentokrtc.com'+req.url );
     return;
   }
@@ -45,33 +46,16 @@ app.get("/:rid", function( req, res ){
   // find request format, json or html?
   var path = req.params.rid.split(".json");
   var rid = path[0];
-  var roomRef = new Firebase("https://rtcdemo.firebaseIO.com/room/" + rid);
-
-  // on incoming request, make sure we have presenceListener to remove the room if it is empty
-  if( !presenceListener[rid] ){
-    presenceListener[rid] = true
-    var presenceRef = new Firebase("https://rtcdemo.firebaseIO.com/room/" + rid + "/users");
-    presenceRef.on('value', function(dataSnapshot){
-      // remove room if there is no one in the room
-      if(dataSnapshot.numChildren() == 0){
-        roomRef.remove();
-      }
-    });
-  }
 
   // Generate sessionId if there are no existing session Id's
-  roomRef.once('value', function(dataSnapshot){
-    var sidSnapshot = dataSnapshot.child('sid');
-    var sid = sidSnapshot.val();
-    if(!sid){
-      OpenTokObject.createSession(function(sessionId){
-        sidSnapshot.ref().set( sessionId );
-        returnRoomResponse( res, { rid: rid, sid: sessionId }, path[1]);
-      });
-    }else{
-      returnRoomResponse( res, { rid: rid, sid: sid }, path[1]);
-    }
-  });
+  if( !rooms[rid] ){
+    OpenTokObject.createSession(function(sessionId){
+      rooms[rid] = sessionId;
+      returnRoomResponse( res, { rid: rid, sid: sessionId }, path[1]);
+    });
+  }else{
+    returnRoomResponse( res, { rid: rid, sid: rooms[rid] }, path[1]);
+  }
 });
 
 function returnRoomResponse( res, data, json ){
