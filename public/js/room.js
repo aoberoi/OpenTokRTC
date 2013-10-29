@@ -166,18 +166,20 @@
         }
       }, this.errorSignal);
       this.allUsers[cid] = guestName;
-      this.displayChatMessage(this.notifyTemplate({
-        message: "" + guestName + " has joined the room"
-      }));
+      this.writeChatData({
+        name: this.name,
+        text: "/serv " + guestName + " has joined the room"
+      });
       return console.log("signal new connection room info");
     };
 
     User.prototype.connectionDestroyedHandler = function(event) {
       var cid;
       cid = "" + event.connections[0].id;
-      this.displayChatMessage(this.notifyTemplate({
-        message: "" + this.allUsers[cid] + " has left the room"
-      }));
+      this.writeChatData({
+        name: this.name,
+        text: "/serv " + this.allUsers[cid] + " has left the room"
+      });
       return delete this.allUsers[cid];
     };
 
