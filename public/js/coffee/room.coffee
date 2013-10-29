@@ -78,11 +78,11 @@ class User
     console.log @allUsers
     @session.signal( { type: "initialize", to: event.connections, data: {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3]}}, @errorSignal )
     @allUsers[cid] = guestName
-    @displayChatMessage( @notifyTemplate( {message: "#{guestName} has joined the room" } ) )
+    @writeChatData( {name: @name, text:"/serv #{guestName} has joined the room"  } )
     console.log "signal new connection room info"
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connections[0].id}"
-    @displayChatMessage( @notifyTemplate( {message: "#{@allUsers[cid]} has left the room" } ) )
+    @writeChatData( {name: @name, text:"/serv #{@allUsers[cid]} has left the room"  } )
     delete @allUsers[cid]
   signalInitializeHandler: ( event ) =>
     console.log "initialize handler"
