@@ -2,7 +2,6 @@
 // *** Required modules
 // ***
 var express = require('express');
-var Firebase = require('firebase');
 var OpenTokLibrary = require('opentok');
 
 // ***
