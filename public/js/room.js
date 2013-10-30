@@ -155,6 +155,11 @@
       guestName = "Guest-" + (cid.substring(cid.length - 8, cid.length));
       console.log("signaling over!");
       console.log(this.allUsers);
+      this.allUsers[cid] = guestName;
+      this.writeChatData({
+        name: this.name,
+        text: "/serv " + guestName + " has joined the room"
+      });
       this.session.signal({
         type: "initialize",
         to: event.connections,
@@ -165,11 +170,6 @@
           random: [1, 2, 3]
         }
       }, this.errorSignal);
-      this.allUsers[cid] = guestName;
-      this.writeChatData({
-        name: this.name,
-        text: "/serv " + guestName + " has joined the room"
-      });
       return console.log("signal new connection room info");
     };
 
