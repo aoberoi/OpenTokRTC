@@ -3,7 +3,7 @@
     "version":"0.0.2",
     "dependencies":{
       "express":"",
-      "opentok":"",
+      "opentok":"git://github.com/opentok/opentok-node.git#ignore-ssl",
       "ejs":""
     }
 }
