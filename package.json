@@ -1,6 +1,6 @@
 {
     "name":"NodeOpenTok",
-    "version":"0.0.2",
+    "version":"0.0.3",
     "dependencies":{
       "express":"",
       "opentok":"git://github.com/opentok/opentok-node.git#ignore-ssl",
