@@ -25,12 +25,11 @@ app.set( 'view engine', 'ejs' );
 // ***
 app.get("/", function( req, res ){
   // make sure that we are always in https
-//  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
-//    res.redirect( 'https://opentokrtc.com' );
-//  }else{
-//    res.render( 'index' );
-//  }
+  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
+    res.redirect( 'https://opentokrtc.com' );
+  }else{
     res.render( 'index' );
+  }
 });
 
 var rooms = {};
@@ -38,10 +37,10 @@ var rooms = {};
 app.get("/:rid", function( req, res ){
   // make sure that we are always in https
   console.log( req.url );
-//  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
-//    res.redirect( 'https://opentokrtc.com'+req.url );
-//    return;
-//  }
+  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
+    res.redirect( 'https://opentokrtc.com'+req.url );
+    return;
+  }
 
   // find request format, json or html?
   var path = req.params.rid.split(".json");
