@@ -162,7 +162,7 @@
       });
       this.session.signal({
         type: "initialize",
-        to: event.connections,
+        to: event.connection,
         data: {
           chat: this.chatData,
           filter: this.filterData,

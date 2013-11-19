@@ -78,7 +78,7 @@ class User
     console.log @allUsers
     @allUsers[cid] = guestName
     @writeChatData( {name: @name, text:"/serv #{guestName} has joined the room"  } )
-    @session.signal( { type: "initialize", to: event.connections, data: {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3]}}, @errorSignal )
+    @session.signal( { type: "initialize", to: event.connection, data: {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3]}}, @errorSignal )
     console.log "signal new connection room info"
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connections[0].id}"
