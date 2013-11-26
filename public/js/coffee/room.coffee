@@ -1,5 +1,3 @@
-window.onresize = ->
-  ResizeLayoutContainer()
 
 class User
   constructor: (@rid, @apiKey, @sid, @token) ->
@@ -15,8 +13,15 @@ class User
     @allUsers = {}
     @printCommands() # welcome users into the room
 
+    @layout = TB.initLayoutContainer( document.getElementById( "streams_container"), {
+      animate:
+        duration: 500,
+        easing: "swing"
+        bigFixedRatio: false
+    }).layout
+
     # set up OpenTok
-    @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:240, height:190} )
+    @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:"100%", height:"100%"} )
     @session = TB.initSession( @sid )
     @session.on( "sessionConnected", @sessionConnectedHandler )
     @session.on( "sessionDisconnected", @sessionDisconnectedHandler )
@@ -40,13 +45,15 @@ class User
       self.session.signal( {type: "filter", data: {cid: self.session.connection.connectionId, filter: prop }}, self.errorSignal )
       self.filterData[self.session.connection.connectionId] = prop
     $('#messageInput').keypress @inputKeypress
+    window.onresize = ->
+      self.layout()
 
   # session and signaling events
   sessionConnectedHandler: (event) =>
     console.log "session connected"
     @subscribeStreams(event.streams)
     @session.publish( @publisher )
-    ResizeLayoutContainer()
+    @layout()
 
     @myConnectionId = @session.connection.connectionId
     @name = "Guest-#{@myConnectionId.substring( @myConnectionId.length - 8, @myConnectionId.length )}"
@@ -63,13 +70,13 @@ class User
   streamCreatedHandler: (event) =>
     console.log "streamCreated"
     @subscribeStreams(event.streams)
-    ResizeLayoutContainer()
+    @layout()
   streamDestroyedHandler: (event) =>
     for stream in event.streams
       if @session.connection.connectionId == stream.connection.connectionId
         return
       @removeStream( stream.connection.connectionId )
-    ResizeLayoutContainer()
+    @layout()
   connectionCreatedHandler: ( event ) =>
     console.log "new connection created"
     cid = "#{event.connections[0].id}"
@@ -158,7 +165,7 @@ class User
       # create new div container for stream, subscribe, apply filter
       divId = "stream#{streamConnectionId}"
       $("#streams_container").append( @userStreamTemplate({ id: divId }) )
-      @session.subscribe( stream, divId , {width:240, height:190} )
+      @session.subscribe( stream, divId , {width:"100%", height:"100%"} )
       @applyClassFilter( @filterData[ streamConnectionId ], ".stream#{streamConnectionId}" )
 
       # bindings to mark offensive users
