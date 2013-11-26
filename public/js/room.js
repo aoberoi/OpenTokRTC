@@ -3,10 +3,6 @@
   var User,
     _this = this;
 
-  window.onresize = function() {
-    return ResizeLayoutContainer();
-  };
-
   User = (function() {
 
     function User(rid, apiKey, sid, token) {
@@ -72,9 +68,16 @@
       this.filterData = {};
       this.allUsers = {};
       this.printCommands();
+      this.layout = TB.initLayoutContainer(document.getElementById("streams_container"), {
+        animate: {
+          duration: 500,
+          easing: "swing",
+          bigFixedRatio: false
+        }
+      }).layout;
       this.publisher = TB.initPublisher(this.apiKey, "myPublisher", {
-        width: 240,
-        height: 190
+        width: "100%",
+        height: "100%"
       });
       this.session = TB.initSession(this.sid);
       this.session.on("sessionConnected", this.sessionConnectedHandler);
@@ -105,13 +108,16 @@
         return self.filterData[self.session.connection.connectionId] = prop;
       });
       $('#messageInput').keypress(this.inputKeypress);
+      window.onresize = function() {
+        return self.layout();
+      };
     }
 
     User.prototype.sessionConnectedHandler = function(event) {
       console.log("session connected");
       this.subscribeStreams(event.streams);
       this.session.publish(this.publisher);
-      ResizeLayoutContainer();
+      this.layout();
       this.myConnectionId = this.session.connection.connectionId;
       this.name = "Guest-" + (this.myConnectionId.substring(this.myConnectionId.length - 8, this.myConnectionId.length));
       this.allUsers[this.myConnectionId] = this.name;
@@ -132,7 +138,7 @@
     User.prototype.streamCreatedHandler = function(event) {
       console.log("streamCreated");
       this.subscribeStreams(event.streams);
-      return ResizeLayoutContainer();
+      return this.layout();
     };
 
     User.prototype.streamDestroyedHandler = function(event) {
@@ -145,7 +151,7 @@
         }
         this.removeStream(stream.connection.connectionId);
       }
-      return ResizeLayoutContainer();
+      return this.layout();
     };
 
     User.prototype.connectionCreatedHandler = function(event) {
@@ -324,8 +330,8 @@
           id: divId
         }));
         this.session.subscribe(stream, divId, {
-          width: 240,
-          height: 190
+          width: "100%",
+          height: "100%"
         });
         this.applyClassFilter(this.filterData[streamConnectionId], ".stream" + streamConnectionId);
         divId$ = $("." + divId);
