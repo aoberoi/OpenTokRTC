@@ -69,11 +69,8 @@
       this.allUsers = {};
       this.printCommands();
       this.layout = TB.initLayoutContainer(document.getElementById("streams_container"), {
-        animate: {
-          duration: 500,
-          easing: "swing",
-          bigFixedRatio: false
-        }
+        bigFixedRatio: true,
+        fixedRatio: true
       }).layout;
       this.publisher = TB.initPublisher(this.apiKey, "myPublisher", {
         width: "100%",
@@ -401,9 +398,10 @@
       this.displayChatMessage(this.notifyTemplate({
         message: "Type /help to see a list of commands"
       }));
-      return this.displayChatMessage(this.notifyTemplate({
+      this.displayChatMessage(this.notifyTemplate({
         message: "-----------"
       }));
+      return $(".chatMessage:first").css("margin-top", $("#title").outerHeight() + "px");
     };
 
     return User;

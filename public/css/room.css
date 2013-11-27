@@ -120,6 +120,35 @@
   height: 100%;
   position: relative; }
 
+#title {
+  position: absolute;
+  top: 0;
+  left: 0px;
+  right: 0px;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 5; }
+  #title #title_content {
+    position: relative;
+    width: 100%;
+    height: 100%; }
+    #title #title_content p {
+      color: #eeeef2;
+      text-align: center; }
+      #title #title_content p a {
+        color: #1ba3dd; }
+    #title #title_content .titleText {
+      width: 100%;
+      min-height: 25px;
+      text-align: center;
+      color: white;
+      font-family: "AvantGardeGothicITCW01X";
+      font-weight: lighter;
+      vertical-align: middle;
+      line-height: 100%;
+      padding-top: 5px;
+      font-size: 25px; }
+
 #displayChat {
   padding: 5px;
   overflow: auto;
@@ -136,6 +165,8 @@
     margin: 10px 5px 5px 5px;
     font-size: 15px;
     word-wrap: break-word; }
+    #displayChat .chatMessage:first-child {
+      margin-top: 75px; }
   #displayChat li h4 {
     display: inline;
     font-size: 15px; }
@@ -184,7 +215,7 @@ body {
     left: 0; }
   body #streams_container {
     position: fixed;
-    top: 75px;
+    top: 0px;
     bottom: 42px;
     right: 400px;
     left: 0px;
@@ -218,31 +249,3 @@ body {
       display: none; }
   body .clickThrough {
     pointer-events: none; }
-  body #title {
-    position: fixed;
-    top: 0;
-    right: 400px;
-    left: 0px;
-    height: 70px;
-    width: 300px;
-    margin: auto; }
-  body #title_content {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); }
-    body #title_content p {
-      color: #eeeef2;
-      text-align: center; }
-      body #title_content p a {
-        color: #1ba3dd; }
-  body #title_content .titleText {
-    width: 100%;
-    height: 30px;
-    text-align: center;
-    color: white;
-    font-family: "AvantGardeGothicITCW01X";
-    font-weight: lighter;
-    vertical-align: middle;
-    line-height: 100%;
-    font-size: 30px; }

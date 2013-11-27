@@ -15,6 +15,45 @@
   position:relative;
 }
 
+
+#title{
+  position:absolute;
+  top:0;
+  left: 0px;
+  right: 0px;
+  width: 100%;
+  background-color: rgba(0,0,0,0.9);
+  z-index: 5;
+
+  #title_content{
+    position:relative;
+    width:100%;
+    height:100%;
+    p{
+      color: #eeeef2;
+      text-align:center;
+      a{
+        color: $pink;
+      }
+    }
+
+    .titleText{
+      width: 100%;
+      min-height: 25px;
+      text-align:center;
+      color: $hdrContrastColor;
+      font-family: $avantFont;
+      font-weight: lighter;
+      vertical-align:middle;
+      line-height:100%;
+      padding-top: 5px;
+      font-size: 25px;
+    }
+
+  }
+}
+
+
 #displayChat{
   padding:5px;
   overflow:auto;
@@ -22,7 +61,7 @@
   position:absolute;
   right:0;
   left:0;
-  top:0;
+  top: 0;
   bottom:40px;
   .chatEvent{
     text-align:center;
@@ -32,6 +71,9 @@
     margin:10px 5px 5px 5px;
     font-size:15px;
     word-wrap:break-word;
+    &:first-child{
+      margin-top: $roomTitleHeight;
+    }
   }
   li h4{
     display:inline;
