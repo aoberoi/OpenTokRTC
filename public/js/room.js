@@ -104,7 +104,16 @@
         }, self.errorSignal);
         return self.filterData[self.session.connection.connectionId] = prop;
       });
+      $('#chatroom').click(function() {
+        return $(".container").css('right', '0px');
+      });
       $('#messageInput').keypress(this.inputKeypress);
+      $("#streams_container").click(function() {
+        return $('.container').css('right', '-300px');
+      });
+      $(".container").on("transitionend webkitTransitionEnd oTransitionEnd otransitionend", function(event) {
+        return self.layout();
+      });
       window.onresize = function() {
         return self.layout();
       };
@@ -231,18 +240,23 @@
     User.prototype.inputKeypress = function(e) {
       var k, msgData, parts, text, v, _ref, _ref1;
       msgData = {};
-      if (e.keyCode === 13) {
-        text = $('#messageInput').val().trim();
-        if (text.length < 1) {
-          return;
-        }
-        parts = text.split(' ');
-        if (parts[0] === "/help") {
+      if (e.keyCode !== 13) {
+        return;
+      }
+      text = $('#messageInput').val().trim();
+      if (text.length < 1) {
+        return;
+      }
+      parts = text.split(' ');
+      switch (parts[0]) {
+        case "/hide":
+          $('#messageInput').blur();
+          $('.container').css('right', '-300px');
+          break;
+        case "/help":
           this.printCommands();
-          $('#messageInput').val('');
-          return;
-        }
-        if (parts[0] === "/list") {
+          break;
+        case "/list":
           this.displayChatMessage(this.notifyTemplate({
             message: "-----------"
           }));
@@ -260,9 +274,9 @@
             message: "-----------"
           }));
           $('#messageInput').val('');
-          return;
-        }
-        if (parts[0] === "/name" || parts[0] === "/nick") {
+          break;
+        case "/name":
+        case "/nick":
           _ref1 = this.allUsers;
           for (k in _ref1) {
             v = _ref1[k];
@@ -280,18 +294,18 @@
             data: [this.myConnectionId, parts[1]]
           }, this.errorSignal);
           this.name = parts[1];
-        } else {
+          break;
+        default:
           msgData = {
             name: this.name,
             text: text
           };
-        }
-        $('#messageInput').val('');
-        return this.session.signal({
-          type: "chat",
-          data: msgData
-        }, this.errorSignal);
+          this.session.signal({
+            type: "chat",
+            data: msgData
+          }, this.errorSignal);
       }
+      return $('#messageInput').val('');
     };
 
     User.prototype.errorSignal = function(error) {
@@ -397,6 +411,9 @@
       }));
       this.displayChatMessage(this.notifyTemplate({
         message: "Type /help to see a list of commands"
+      }));
+      this.displayChatMessage(this.notifyTemplate({
+        message: "Type /hide to hide chat bar"
       }));
       this.displayChatMessage(this.notifyTemplate({
         message: "-----------"

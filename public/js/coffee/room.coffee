@@ -42,7 +42,13 @@ class User
       $(@).addClass("optionSelected")
       self.session.signal( {type: "filter", data: {cid: self.session.connection.connectionId, filter: prop }}, self.errorSignal )
       self.filterData[self.session.connection.connectionId] = prop
+    $('#chatroom').click ->
+      $(".container").css( 'right', '0px' )
     $('#messageInput').keypress @inputKeypress
+    $("#streams_container").click ->
+      $('.container').css('right', '-300px')
+    $(".container").on "transitionend webkitTransitionEnd oTransitionEnd otransitionend", (event) ->
+      self.layout()
     window.onresize = ->
       self.layout()
 
@@ -114,23 +120,25 @@ class User
   # events
   inputKeypress: (e) =>
     msgData = {}
-    if (e.keyCode == 13)
-      text = $('#messageInput').val().trim()
-      if text.length < 1 then return
-      parts = text.split(' ')
-      if parts[0] == "/help"
+    if (e.keyCode != 13) then return
+    text = $('#messageInput').val().trim()
+    if text.length < 1 then return
+
+    parts = text.split(' ')
+    switch parts[0]
+      when "/hide"
+        $('#messageInput').blur()
+        $('.container').css('right', '-300px')
+      when "/help"
         @printCommands()
-        $('#messageInput').val('')
-        return
-      if parts[0] == "/list"
+      when "/list"
         @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
         @displayChatMessage( @notifyTemplate( {message: "Users currently in the room"} ) )
         for k,v of @allUsers
           @displayChatMessage( @notifyTemplate( {message: "- #{v}" } ) )
         @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
         $('#messageInput').val('')
-        return
-      if parts[0] == "/name" or parts[0] == "/nick"
+      when "/name", "/nick"
         for k, v of @allUsers
           if v == parts[1] or parts[1].length <= 2
             alert("Sorry, but that name has already been taken or is too short.")
@@ -140,8 +148,8 @@ class User
         @name = parts[1]
       else
         msgData = {name: @name, text: text}
-      $('#messageInput').val('')
-      @session.signal( {type: "chat", data: msgData}, @errorSignal )
+        @session.signal( {type: "chat", data: msgData}, @errorSignal )
+    $('#messageInput').val('')
 
   # helpers
   errorSignal: (error) =>
@@ -204,6 +212,7 @@ class User
     @displayChatMessage( @notifyTemplate( {message: "Type /nick your_name to change your name"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /list to see list of users in the room"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /help to see a list of commands"} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Type /hide to hide chat bar"} ) )
     @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
     $(".chatMessage:first").css("margin-top", $("#title").outerHeight()+"px")
 window.User = User
