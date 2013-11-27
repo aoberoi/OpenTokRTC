@@ -29,7 +29,7 @@ body {
 
     #streams_container{
       position:fixed;
-      top: 75px;
+      top: 0px;
       bottom: 42px;
       right: $chatRoomWidth;
       left: 0px;
@@ -75,40 +75,5 @@ body {
       pointer-events:none;
     }
 
-    #title{
-      position:fixed;
-      top:0;
-      right: 400px;
-      left: 0px;
-      height:70px;
-      width: 300px;
-      margin: auto;
-    }
-
-    #title_content{
-      position:relative;
-      width:100%;
-      height:100%;
-      background-color: rgba(0,0,0,0.5);
-      p{
-        color: #eeeef2;
-        text-align:center;
-        a{
-          color: $pink;
-        }
-      }
-    }
-
-    #title_content .titleText{
-      width: 100%;
-      height:30px;
-      text-align:center;
-      color: $hdrContrastColor;
-      font-family: $avantFont;
-      font-weight: lighter;
-      vertical-align:middle;
-      line-height:100%;
-      font-size: 30px;
-    }
 }
 

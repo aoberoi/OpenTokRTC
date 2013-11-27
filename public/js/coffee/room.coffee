@@ -14,10 +14,8 @@ class User
     @printCommands() # welcome users into the room
 
     @layout = TB.initLayoutContainer( document.getElementById( "streams_container"), {
-      animate:
-        duration: 500,
-        easing: "swing"
-        bigFixedRatio: false
+      bigFixedRatio: true
+      fixedRatio: true
     }).layout
 
     # set up OpenTok
@@ -207,4 +205,5 @@ class User
     @displayChatMessage( @notifyTemplate( {message: "Type /list to see list of users in the room"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /help to see a list of commands"} ) )
     @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
+    $(".chatMessage:first").css("margin-top", $("#title").outerHeight()+"px")
 window.User = User
