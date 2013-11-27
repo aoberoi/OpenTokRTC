@@ -19,16 +19,12 @@
 #chatroom {
   background: white;
   border: 3px solid #1ba3dd;
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   width: 400px;
   box-sizing: border-box; }
-
-#chatElementContainer {
-  height: 100%;
-  position: relative; }
 
 #title {
   position: absolute;
