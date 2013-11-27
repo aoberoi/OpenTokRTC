@@ -43,7 +43,7 @@
   color: white;
   padding-top: 10px;
   text-align: center;
-  position: fixed;
+  position: absolute;
   bottom: 0px;
   right: 400px;
   left: 0px;

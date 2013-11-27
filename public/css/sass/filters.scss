@@ -31,9 +31,9 @@
   color: $hdrContrastColor;
   padding-top:10px;
   text-align:center;
-  position:fixed;
+  position:absolute;
   bottom: 0px;
-  right: 400px;
+  right: $chatRoomWidth;
   left: 0px;
   background-color: #EEE;
   h1{

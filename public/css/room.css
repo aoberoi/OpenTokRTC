@@ -61,7 +61,7 @@
   color: white;
   padding-top: 10px;
   text-align: center;
-  position: fixed;
+  position: absolute;
   bottom: 0px;
   right: 400px;
   left: 0px;
@@ -109,16 +109,12 @@
 #chatroom {
   background: white;
   border: 3px solid #1ba3dd;
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   width: 400px;
   box-sizing: border-box; }
-
-#chatElementContainer {
-  height: 100%;
-  position: relative; }
 
 #title {
   position: absolute;
@@ -212,9 +208,13 @@ body {
     top: 0;
     bottom: 0;
     right: 0;
-    left: 0; }
+    left: 0;
+    margin: 0;
+    padding: 0;
+    width: auto;
+    height: 100%; }
   body #streams_container {
-    position: fixed;
+    position: absolute;
     top: 0px;
     bottom: 42px;
     right: 400px;
