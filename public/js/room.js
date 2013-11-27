@@ -293,6 +293,10 @@
             type: "name",
             data: [this.myConnectionId, parts[1]]
           }, this.errorSignal);
+          this.session.signal({
+            type: "chat",
+            data: msgData
+          }, this.errorSignal);
           this.name = parts[1];
           break;
         default:
