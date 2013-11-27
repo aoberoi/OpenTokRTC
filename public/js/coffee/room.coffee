@@ -145,6 +145,7 @@ class User
             return
         msgData = {name: parts[1], text: "/serv #{@name} is now known as #{parts[1]}"}
         @session.signal( {type: "name", data: [@myConnectionId, parts[1]]}, @errorSignal )
+        @session.signal( {type: "chat", data: msgData}, @errorSignal )
         @name = parts[1]
       else
         msgData = {name: @name, text: text}
