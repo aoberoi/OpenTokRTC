@@ -29,6 +29,8 @@ body {
       padding: 0;
       width:auto;
       height: 100%;
+      transition: all 0.5s;
+      -webkit-transition: all 0.5s;
     }
 
     #streams_container{

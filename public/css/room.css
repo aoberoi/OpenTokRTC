@@ -212,7 +212,9 @@ body {
     margin: 0;
     padding: 0;
     width: auto;
-    height: 100%; }
+    height: 100%;
+    transition: all 0.5s;
+    -webkit-transition: all 0.5s; }
   body #streams_container {
     position: absolute;
     top: 0px;
