@@ -44,6 +44,7 @@ class User
       self.filterData[self.session.connection.connectionId] = prop
     $('#chatroom').click ->
       $(".container").css( 'right', '0px' )
+      $("#messageInput").focus()
     $('#messageInput').keypress @inputKeypress
     $("#streams_container").click ->
       $('.container').css('right', '-300px')
