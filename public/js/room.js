@@ -105,7 +105,8 @@
         return self.filterData[self.session.connection.connectionId] = prop;
       });
       $('#chatroom').click(function() {
-        return $(".container").css('right', '0px');
+        $(".container").css('right', '0px');
+        return $("#messageInput").focus();
       });
       $('#messageInput').keypress(this.inputKeypress);
       $("#streams_container").click(function() {
