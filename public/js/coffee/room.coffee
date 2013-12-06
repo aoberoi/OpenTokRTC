@@ -14,8 +14,12 @@ class User
     @printCommands() # welcome users into the room
 
     @layout = TB.initLayoutContainer( document.getElementById( "streams_container"), {
-      bigFixedRatio: true
       fixedRatio: true
+      animate: true
+      bigClass: "OT_big"
+      bigPercentage: 0.85
+      bigFixedRatio: false
+      easing: "swing"
     }).layout
 
     # set up OpenTok
@@ -52,6 +56,7 @@ class User
       self.layout()
     window.onresize = ->
       self.layout()
+    @bigVideoListener( $("#myPublisherContainer") )
 
   # session and signaling events
   sessionConnectedHandler: (event) =>
@@ -154,6 +159,14 @@ class User
     $('#messageInput').val('')
 
   # helpers
+  bigVideoListener: (div$) =>
+    self = this
+    div$.on "dblclick", ->
+      if( $(this).hasClass("OT_big") )
+        $(this).removeClass("OT_big")
+      else
+        $(this).addClass("OT_big")
+      self.layout()
   errorSignal: (error) =>
     if (error)
       console.log("signal error: " + error.reason)
@@ -182,6 +195,8 @@ class User
         $(@).find('.flagUser').show()
       divId$.mouseleave ->
         $(@).find('.flagUser').hide()
+
+      @bigVideoListener( divId$ )
 
       # mark user as offensive
       self = @

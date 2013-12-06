@@ -27,6 +27,9 @@
       this.errorSignal = function(error) {
         return User.prototype.errorSignal.apply(_this, arguments);
       };
+      this.bigVideoListener = function(div$) {
+        return User.prototype.bigVideoListener.apply(_this, arguments);
+      };
       this.inputKeypress = function(e) {
         return User.prototype.inputKeypress.apply(_this, arguments);
       };
@@ -69,8 +72,12 @@
       this.allUsers = {};
       this.printCommands();
       this.layout = TB.initLayoutContainer(document.getElementById("streams_container"), {
-        bigFixedRatio: true,
-        fixedRatio: true
+        fixedRatio: true,
+        animate: true,
+        bigClass: "OT_big",
+        bigPercentage: 0.85,
+        bigFixedRatio: false,
+        easing: "swing"
       }).layout;
       this.publisher = TB.initPublisher(this.apiKey, "myPublisher", {
         width: "100%",
@@ -118,6 +125,7 @@
       window.onresize = function() {
         return self.layout();
       };
+      this.bigVideoListener($("#myPublisherContainer"));
     }
 
     User.prototype.sessionConnectedHandler = function(event) {
@@ -313,6 +321,19 @@
       return $('#messageInput').val('');
     };
 
+    User.prototype.bigVideoListener = function(div$) {
+      var self;
+      self = this;
+      return div$.on("dblclick", function() {
+        if ($(this).hasClass("OT_big")) {
+          $(this).removeClass("OT_big");
+        } else {
+          $(this).addClass("OT_big");
+        }
+        return self.layout();
+      });
+    };
+
     User.prototype.errorSignal = function(error) {
       if (error) {
         return console.log("signal error: " + error.reason);
@@ -357,6 +378,7 @@
         divId$.mouseleave(function() {
           return $(this).find('.flagUser').hide();
         });
+        this.bigVideoListener(divId$);
         self = this;
         divId$.find('.flagUser').click(function() {
           var streamConnection;
