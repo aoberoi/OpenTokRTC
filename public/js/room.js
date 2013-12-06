@@ -328,7 +328,9 @@
         if ($(this).hasClass("OT_big")) {
           $(this).removeClass("OT_big");
         } else {
-          $(this).addClass("OT_big");
+          if ($(".OT_big").length < 2) {
+            $(this).addClass("OT_big");
+          }
         }
         return self.layout();
       });
