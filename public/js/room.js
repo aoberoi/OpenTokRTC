@@ -27,6 +27,9 @@
       this.errorSignal = function(error) {
         return User.prototype.errorSignal.apply(_this, arguments);
       };
+      this.syncStreamsProperty = function() {
+        return User.prototype.syncStreamsProperty.apply(_this, arguments);
+      };
       this.inputKeypress = function(e) {
         return User.prototype.inputKeypress.apply(_this, arguments);
       };
@@ -180,7 +183,6 @@
       cid = "" + event.connections[0].id;
       guestName = "Guest-" + (cid.substring(cid.length - 8, cid.length));
       console.log("signaling over!");
-      console.log(this.allUsers);
       this.allUsers[cid] = guestName;
       this.writeChatData({
         name: this.name,
@@ -234,7 +236,8 @@
         e = _ref2[_i];
         this.writeChatData(e);
       }
-      return this.initialized = true;
+      this.initialized = true;
+      return this.syncStreamsProperty();
     };
 
     User.prototype.signalChatHandler = function(event) {
@@ -299,7 +302,6 @@
     User.prototype.signalNameHandler = function(event) {
       var oldName;
       console.log("name signal received");
-      console.log(event.data);
       oldName = this.allUsers[event.data[0]];
       this.allUsers[event.data[0]] = event.data[1];
       return this.writeChatData({
@@ -387,6 +389,22 @@
       return $('#messageInput').val('');
     };
 
+    User.prototype.syncStreamsProperty = function() {
+      var e, streamConnectionId, _i, _len, _ref, _results;
+      _ref = $(".streamContainer");
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        e = _ref[_i];
+        streamConnectionId = $(e).data('connectionid');
+        if (this.filterData && this.filterData[streamConnectionId]) {
+          _results.push(this.applyClassFilter(this.filterData[streamConnectionId], ".stream" + streamConnectionId));
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
     User.prototype.errorSignal = function(error) {
       if (error) {
         return console.log("signal error: " + error.reason);
@@ -424,7 +442,6 @@
           width: "100%",
           height: "100%"
         });
-        this.applyClassFilter(this.filterData[streamConnectionId], ".stream" + streamConnectionId);
         divId$ = $("." + divId);
         divId$.mouseenter(function() {
           return $(this).find('.flagUser').show();
@@ -442,6 +459,7 @@
           }
         });
       }
+      return this.syncStreamsProperty();
     };
 
     User.prototype.writeChatData = function(val) {
