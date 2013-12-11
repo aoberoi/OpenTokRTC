@@ -27,9 +27,6 @@
       this.errorSignal = function(error) {
         return User.prototype.errorSignal.apply(_this, arguments);
       };
-      this.bigVideoListener = function(div$) {
-        return User.prototype.bigVideoListener.apply(_this, arguments);
-      };
       this.inputKeypress = function(e) {
         return User.prototype.inputKeypress.apply(_this, arguments);
       };
@@ -38,6 +35,12 @@
       };
       this.signalFilterHandler = function(event) {
         return User.prototype.signalFilterHandler.apply(_this, arguments);
+      };
+      this.signalUnfocusHandler = function(event) {
+        return User.prototype.signalUnfocusHandler.apply(_this, arguments);
+      };
+      this.signalFocusHandler = function(event) {
+        return User.prototype.signalFocusHandler.apply(_this, arguments);
       };
       this.signalChatHandler = function(event) {
         return User.prototype.signalChatHandler.apply(_this, arguments);
@@ -71,6 +74,7 @@
       this.filterData = {};
       this.allUsers = {};
       this.printCommands();
+      this.subscribers = {};
       this.layout = TB.initLayoutContainer(document.getElementById("streams_container"), {
         fixedRatio: true,
         animate: true,
@@ -92,6 +96,8 @@
       this.session.on("connectionDestroyed", this.connectionDestroyedHandler);
       this.session.on("signal:initialize", this.signalInitializeHandler);
       this.session.on("signal:chat", this.signalChatHandler);
+      this.session.on("signal:focus", this.signalFocusHandler);
+      this.session.on("signal:unfocus", this.signalUnfocusHandler);
       this.session.on("signal:filter", this.signalFilterHandler);
       this.session.on("signal:name", this.signalNameHandler);
       this.session.connect(this.apiKey, this.token);
@@ -125,7 +131,6 @@
       window.onresize = function() {
         return self.layout();
       };
-      this.bigVideoListener($("#myPublisherContainer"));
     }
 
     User.prototype.sessionConnectedHandler = function(event) {
@@ -201,6 +206,9 @@
         name: this.name,
         text: "/serv " + this.allUsers[cid] + " has left the room"
       });
+      if (this.subscribers[cid]) {
+        delete this.subscribers[cid];
+      }
       return delete this.allUsers[cid];
     };
 
@@ -231,6 +239,46 @@
 
     User.prototype.signalChatHandler = function(event) {
       return this.writeChatData(event.data);
+    };
+
+    User.prototype.signalFocusHandler = function(event) {
+      var className, e, streamConnectionId, _i, _len, _ref;
+      if (event.data === this.myConnectionId) {
+        $("#myPublisherContainer").addClass("OT_big");
+      } else {
+        $("#myPublisherContainer").removeClass("OT_big");
+      }
+      _ref = $(".streamContainer");
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        e = _ref[_i];
+        className = "stream" + event.data;
+        if ($(e).hasClass(className) && this.subscribers[event.data]) {
+          $(e).addClass("OT_big");
+          this.subscribers[event.data].restrictFrameRate(false);
+        } else {
+          streamConnectionId = $(e).data('connectionid');
+          if (this.subscribers[streamConnectionId]) {
+            $(e).removeClass("OT_big");
+            this.subscribers[streamConnectionId].restrictFrameRate(true);
+          }
+        }
+      }
+      return this.layout();
+    };
+
+    User.prototype.signalUnfocusHandler = function(event) {
+      var e, streamConnectionId, _i, _len, _ref;
+      $("#myPublisherContainer").removeClass("OT_big");
+      _ref = $(".streamContainer");
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        e = _ref[_i];
+        $(e).removeClass("OT_big");
+        streamConnectionId = $(e).data('connectionid');
+        if (this.subscribers[streamConnectionId]) {
+          this.subscribers[streamConnectionId].restrictFrameRate(false);
+        }
+      }
+      return this.layout();
     };
 
     User.prototype.signalFilterHandler = function(event) {
@@ -284,6 +332,18 @@
           }));
           $('#messageInput').val('');
           break;
+        case "/focus":
+          this.session.signal({
+            type: "focus",
+            data: this.myConnectionId
+          }, this.errorSignal);
+          break;
+        case "/unfocus":
+          this.session.signal({
+            type: "unfocus",
+            data: this.myConnectionId
+          }, this.errorSignal);
+          break;
         case "/name":
         case "/nick":
           _ref1 = this.allUsers;
@@ -321,21 +381,6 @@
       return $('#messageInput').val('');
     };
 
-    User.prototype.bigVideoListener = function(div$) {
-      var self;
-      self = this;
-      return div$.on("dblclick", function() {
-        if ($(this).hasClass("OT_big")) {
-          $(this).removeClass("OT_big");
-        } else {
-          if ($(".OT_big").length < 2) {
-            $(this).addClass("OT_big");
-          }
-        }
-        return self.layout();
-      });
-    };
-
     User.prototype.errorSignal = function(error) {
       if (error) {
         return console.log("signal error: " + error.reason);
@@ -366,9 +411,10 @@
         }
         divId = "stream" + streamConnectionId;
         $("#streams_container").append(this.userStreamTemplate({
-          id: divId
+          id: divId,
+          connectionId: streamConnectionId
         }));
-        this.session.subscribe(stream, divId, {
+        this.subscribers[streamConnectionId] = this.session.subscribe(stream, divId, {
           width: "100%",
           height: "100%"
         });
@@ -380,7 +426,6 @@
         divId$.mouseleave(function() {
           return $(this).find('.flagUser').hide();
         });
-        this.bigVideoListener(divId$);
         self = this;
         divId$.find('.flagUser').click(function() {
           var streamConnection;
