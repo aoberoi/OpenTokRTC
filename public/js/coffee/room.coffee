@@ -1,4 +1,3 @@
-
 class User
   constructor: (@rid, @apiKey, @sid, @token) ->
     # templates
@@ -12,6 +11,7 @@ class User
     @filterData = {}
     @allUsers = {}
     @printCommands() # welcome users into the room
+    @subscribers = {}
 
     @layout = TB.initLayoutContainer( document.getElementById( "streams_container"), {
       fixedRatio: true
@@ -33,6 +33,8 @@ class User
     @session.on( "connectionDestroyed", @connectionDestroyedHandler )
     @session.on( "signal:initialize", @signalInitializeHandler )
     @session.on( "signal:chat", @signalChatHandler )
+    @session.on( "signal:focus", @signalFocusHandler )
+    @session.on( "signal:unfocus", @signalUnfocusHandler )
     @session.on( "signal:filter", @signalFilterHandler )
     @session.on( "signal:name", @signalNameHandler )
     @session.connect( @apiKey, @token )
@@ -56,7 +58,6 @@ class User
       self.layout()
     window.onresize = ->
       self.layout()
-    @bigVideoListener( $("#myPublisherContainer") )
 
   # session and signaling events
   sessionConnectedHandler: (event) =>
@@ -100,6 +101,8 @@ class User
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connections[0].id}"
     @writeChatData( {name: @name, text:"/serv #{@allUsers[cid]} has left the room"  } )
+    if @subscribers[ cid ]
+      delete @subscribers[cid]
     delete @allUsers[cid]
   signalInitializeHandler: ( event ) =>
     console.log "initialize handler"
@@ -114,6 +117,32 @@ class User
     @initialized = true
   signalChatHandler: ( event ) =>
     @writeChatData( event.data )
+  signalFocusHandler: ( event ) =>
+    # restrict frame rate - first handle publishers
+    if( event.data == @myConnectionId )
+      $("#myPublisherContainer").addClass( "OT_big" )
+    else
+      $("#myPublisherContainer").removeClass( "OT_big" )
+    # handle subscribers
+    for e in $(".streamContainer")
+      className = "stream#{event.data}"
+      if $(e).hasClass( className ) and @subscribers[ event.data ]
+        $(e).addClass( "OT_big" )
+        @subscribers[ event.data ].restrictFrameRate( false )
+      else
+        streamConnectionId = $(e).data('connectionid')
+        if @subscribers[ streamConnectionId ]
+          $(e).removeClass( "OT_big" )
+          @subscribers[ streamConnectionId ].restrictFrameRate( true )
+    @layout()
+  signalUnfocusHandler: ( event ) =>
+    $("#myPublisherContainer").removeClass( "OT_big" )
+    for e in $(".streamContainer")
+      $(e).removeClass( "OT_big" )
+      streamConnectionId = $(e).data('connectionid')
+      if @subscribers[ streamConnectionId ]
+        @subscribers[ streamConnectionId ].restrictFrameRate( false )
+    @layout()
   signalFilterHandler: ( event ) =>
     val = event.data
     console.log "filter received"
@@ -144,6 +173,10 @@ class User
           @displayChatMessage( @notifyTemplate( {message: "- #{v}" } ) )
         @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
         $('#messageInput').val('')
+      when "/focus"
+        @session.signal( {type: "focus", data: @myConnectionId}, @errorSignal )
+      when "/unfocus"
+        @session.signal( {type: "unfocus", data: @myConnectionId}, @errorSignal )
       when "/name", "/nick"
         for k, v of @allUsers
           if v == parts[1] or parts[1].length <= 2
@@ -159,15 +192,6 @@ class User
     $('#messageInput').val('')
 
   # helpers
-  bigVideoListener: (div$) =>
-    self = this
-    div$.on "dblclick", ->
-      if( $(this).hasClass("OT_big") )
-        $(this).removeClass("OT_big")
-      else
-        if( $( ".OT_big" ).length < 2 )
-          $(this).addClass("OT_big")
-      self.layout()
   errorSignal: (error) =>
     if (error)
       console.log("signal error: " + error.reason)
@@ -186,8 +210,8 @@ class User
         return
       # create new div container for stream, subscribe, apply filter
       divId = "stream#{streamConnectionId}"
-      $("#streams_container").append( @userStreamTemplate({ id: divId }) )
-      @session.subscribe( stream, divId , {width:"100%", height:"100%"} )
+      $("#streams_container").append( @userStreamTemplate({ id: divId, connectionId: streamConnectionId }) )
+      @subscribers[ streamConnectionId ] = @session.subscribe( stream, divId , {width:"100%", height:"100%"} )
       @applyClassFilter( @filterData[ streamConnectionId ], ".stream#{streamConnectionId}" )
 
       # bindings to mark offensive users
@@ -196,8 +220,6 @@ class User
         $(@).find('.flagUser').show()
       divId$.mouseleave ->
         $(@).find('.flagUser').hide()
-
-      @bigVideoListener( divId$ )
 
       # mark user as offensive
       self = @

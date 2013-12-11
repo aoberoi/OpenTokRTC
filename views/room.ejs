@@ -24,7 +24,7 @@
         <h1 class="titleText"><%= rid %></h1>
         <p>
         Invite: 
-         <a href="mailto:?subject=Join me in a Video Conference&body=Please join me in a video conference at https//OpenTokRTC.com/<%= rid %>">
+         <a href="mailto:?subject=Join me in a Video Conference&body=Please join me in a video conference at https://OpenTokRTC.com/<%= rid %>">
             https://opentokrtc.com/<%= rid %>
          </a> 
         </p>
@@ -60,7 +60,7 @@
 </script>
 
 <script id="userStreamTemplate" type="text/x-handlebars-template">
-  <div class="streamContainer {{id}}">
+  <div class="streamContainer {{id}}" data-connectionid="{{connectionId}}">
     <div id="{{id}}"></div>
     <div class="flagUser" data-streamconnection="{{id}}">Offensive User</div>
   </div>
