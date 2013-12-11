@@ -190,12 +190,13 @@ class User
   # helpers
   setLeaderProperties: ( e ) =>
     streamConnectionId = $(e).data('connectionid')
-    if streamConnectionId == @leader && @subscribers[ streamConnectionId ]
+    if streamConnectionId == @leader && @subscribers[ @leader ]
       $(e).addClass( "OT_big" )
-      @subscribers[ streamConnectionId ].restrictFrameRate( false )
+      @subscribers[ @leader ].restrictFrameRate( false )
     else
       $(e).removeClass( "OT_big" )
-      if @subscribers[ streamConnectionId ]
+      if @subscribers[ streamConnectionId ] && (@subscribers[ @leader ] || @leader==@myConnectionId)
+        console.log "restricting frame rate of non leader"
         @subscribers[ streamConnectionId ].restrictFrameRate( true )
   syncStreamsProperty: =>
     for e in $(".streamContainer")
