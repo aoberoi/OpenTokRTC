@@ -263,7 +263,11 @@
           }
         }
       }
-      return this.layout();
+      this.layout();
+      return this.writeChatData({
+        name: this.allUsers[event.data],
+        text: "/serv " + this.allUsers[event.data] + " is leading the group. Everybody else's video bandwidth is restricted."
+      });
     };
 
     User.prototype.signalUnfocusHandler = function(event) {
@@ -278,7 +282,11 @@
           this.subscribers[streamConnectionId].restrictFrameRate(false);
         }
       }
-      return this.layout();
+      this.layout();
+      return this.writeChatData({
+        name: this.allUsers[event.data],
+        text: "/serv Everybody is now on equal standing. No one leading the group."
+      });
     };
 
     User.prototype.signalFilterHandler = function(event) {
@@ -289,9 +297,15 @@
     };
 
     User.prototype.signalNameHandler = function(event) {
+      var oldName;
       console.log("name signal received");
       console.log(event.data);
-      return this.allUsers[event.data[0]] = event.data[1];
+      oldName = this.allUsers[event.data[0]];
+      this.allUsers[event.data[0]] = event.data[1];
+      return this.writeChatData({
+        name: this.allUsers[event.data[0]],
+        text: "/serv " + oldName + " is now known as " + this.allUsers[event.data[0]]
+      });
     };
 
     User.prototype.inputKeypress = function(e) {
@@ -354,19 +368,11 @@
               return;
             }
           }
-          msgData = {
-            name: parts[1],
-            text: "/serv " + this.name + " is now known as " + parts[1]
-          };
+          this.name = parts[1];
           this.session.signal({
             type: "name",
-            data: [this.myConnectionId, parts[1]]
+            data: [this.myConnectionId, this.name]
           }, this.errorSignal);
-          this.session.signal({
-            type: "chat",
-            data: msgData
-          }, this.errorSignal);
-          this.name = parts[1];
           break;
         default:
           msgData = {
@@ -488,6 +494,12 @@
       }));
       this.displayChatMessage(this.notifyTemplate({
         message: "Type /hide to hide chat bar"
+      }));
+      this.displayChatMessage(this.notifyTemplate({
+        message: "Type /focus to lead the group"
+      }));
+      this.displayChatMessage(this.notifyTemplate({
+        message: "Type /unfocus to put everybody on equal standing"
       }));
       this.displayChatMessage(this.notifyTemplate({
         message: "-----------"

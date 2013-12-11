@@ -135,6 +135,7 @@ class User
           $(e).removeClass( "OT_big" )
           @subscribers[ streamConnectionId ].restrictFrameRate( true )
     @layout()
+    @writeChatData( {name: @allUsers[event.data], text:"/serv #{@allUsers[event.data]} is leading the group. Everybody else's video bandwidth is restricted."  } )
   signalUnfocusHandler: ( event ) =>
     $("#myPublisherContainer").removeClass( "OT_big" )
     for e in $(".streamContainer")
@@ -143,6 +144,7 @@ class User
       if @subscribers[ streamConnectionId ]
         @subscribers[ streamConnectionId ].restrictFrameRate( false )
     @layout()
+    @writeChatData( {name: @allUsers[event.data], text:"/serv Everybody is now on equal standing. No one leading the group."  } )
   signalFilterHandler: ( event ) =>
     val = event.data
     console.log "filter received"
@@ -150,7 +152,9 @@ class User
   signalNameHandler: ( event ) =>
     console.log "name signal received"
     console.log event.data
+    oldName = @allUsers[ event.data[0] ]
     @allUsers[ event.data[0] ] = event.data[1]
+    @writeChatData( {name: @allUsers[ event.data[0] ], text: "/serv #{oldName} is now known as #{@allUsers[ event.data[0] ]}" } )
 
   # events
   inputKeypress: (e) =>
@@ -182,10 +186,8 @@ class User
           if v == parts[1] or parts[1].length <= 2
             alert("Sorry, but that name has already been taken or is too short.")
             return
-        msgData = {name: parts[1], text: "/serv #{@name} is now known as #{parts[1]}"}
-        @session.signal( {type: "name", data: [@myConnectionId, parts[1]]}, @errorSignal )
-        @session.signal( {type: "chat", data: msgData}, @errorSignal )
         @name = parts[1]
+        @session.signal( {type: "name", data: [@myConnectionId, @name]}, @errorSignal )
       else
         msgData = {name: @name, text: text}
         @session.signal( {type: "chat", data: msgData}, @errorSignal )
@@ -253,6 +255,8 @@ class User
     @displayChatMessage( @notifyTemplate( {message: "Type /list to see list of users in the room"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /help to see a list of commands"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /hide to hide chat bar"} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Type /focus to lead the group"} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Type /unfocus to put everybody on equal standing"} ) )
     @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
     $(".chatMessage:first").css("margin-top", $("#title").outerHeight()+"px")
 window.User = User
