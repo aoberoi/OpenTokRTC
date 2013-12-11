@@ -53,7 +53,7 @@ app.get("/:rid", function( req, res ){
       returnRoomResponse( res, { rid: rid, sid: sessionId }, path[1]);
     });
   }else{
-    returnRoomResponse( res, { rid: rid, sid: rooms[rid] }, path[1]);
+    returnRoomResponse( res, { rid: rid, sid: rooms[rid.toUpperCase()] }, path[1]);
   }
 });
 
