@@ -47,9 +47,9 @@ app.get("/:rid", function( req, res ){
   var rid = path[0];
 
   // Generate sessionId if there are no existing session Id's
-  if( !rooms[rid] ){
+  if( !rooms[rid.toUpperCase()] ){
     OpenTokObject.createSession(function(sessionId){
-      rooms[rid] = sessionId;
+      rooms[rid.toUpperCase()] = sessionId;
       returnRoomResponse( res, { rid: rid, sid: sessionId }, path[1]);
     });
   }else{
