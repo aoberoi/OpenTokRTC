@@ -388,12 +388,13 @@
     User.prototype.setLeaderProperties = function(e) {
       var streamConnectionId;
       streamConnectionId = $(e).data('connectionid');
-      if (streamConnectionId === this.leader && this.subscribers[streamConnectionId]) {
+      if (streamConnectionId === this.leader && this.subscribers[this.leader]) {
         $(e).addClass("OT_big");
-        return this.subscribers[streamConnectionId].restrictFrameRate(false);
+        return this.subscribers[this.leader].restrictFrameRate(false);
       } else {
         $(e).removeClass("OT_big");
-        if (this.subscribers[streamConnectionId]) {
+        if (this.subscribers[streamConnectionId] && (this.subscribers[this.leader] || this.leader === this.myConnectionId)) {
+          console.log("restricting frame rate of non leader");
           return this.subscribers[streamConnectionId].restrictFrameRate(true);
         }
       }
