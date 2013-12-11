@@ -12,6 +12,7 @@ class User
     @allUsers = {}
     @printCommands() # welcome users into the room
     @subscribers = {}
+    @leader = false
 
     @layout = TB.initLayoutContainer( document.getElementById( "streams_container"), {
       fixedRatio: true
@@ -23,7 +24,7 @@ class User
     }).layout
 
     # set up OpenTok
-    @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:"100%", height:"100%"} )
+    @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:"100%", height:"100%", publishAudio: false} )
     @session = TB.initSession( @sid )
     @session.on( "sessionConnected", @sessionConnectedHandler )
     @session.on( "sessionDisconnected", @sessionDisconnectedHandler )
@@ -95,7 +96,9 @@ class User
     console.log "signaling over!"
     @allUsers[cid] = guestName
     @writeChatData( {name: @name, text:"/serv #{guestName} has joined the room"  } )
-    @session.signal( { type: "initialize", to: event.connection, data: {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3]}}, @errorSignal )
+    @session.signal( { type: "initialize", to: event.connection, data: {
+      chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader
+    }}, @errorSignal )
     console.log "signal new connection room info"
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connections[0].id}"
@@ -107,6 +110,7 @@ class User
     console.log "initialize handler"
     console.log event.data
     if @initialized then return
+    @leader = event.data.leader
     for k,v of event.data.users
       @allUsers[k] = v
     for k,v of event.data.filter
@@ -119,24 +123,15 @@ class User
     @writeChatData( event.data )
   signalFocusHandler: ( event ) =>
     # restrict frame rate - first handle publishers
-    if( event.data == @myConnectionId )
-      $("#myPublisherContainer").addClass( "OT_big" )
-    else
-      $("#myPublisherContainer").removeClass( "OT_big" )
-    # handle subscribers
+    @leader = event.data
     for e in $(".streamContainer")
-      className = "stream#{event.data}"
-      if $(e).hasClass( className ) and @subscribers[ event.data ]
-        $(e).addClass( "OT_big" )
-        @subscribers[ event.data ].restrictFrameRate( false )
-      else
-        streamConnectionId = $(e).data('connectionid')
-        if @subscribers[ streamConnectionId ]
-          $(e).removeClass( "OT_big" )
-          @subscribers[ streamConnectionId ].restrictFrameRate( true )
+      @setLeaderProperties( e )
+    if @myConnectionId == @leader
+      $("#myPublisherContainer").addClass( "OT_big" )
     @layout()
     @writeChatData( {name: @allUsers[event.data], text:"/serv #{@allUsers[event.data]} is leading the group. Everybody else's video bandwidth is restricted."  } )
   signalUnfocusHandler: ( event ) =>
+    @leader = false
     $("#myPublisherContainer").removeClass( "OT_big" )
     for e in $(".streamContainer")
       $(e).removeClass( "OT_big" )
@@ -193,11 +188,24 @@ class User
     $('#messageInput').val('')
 
   # helpers
+  setLeaderProperties: ( e ) =>
+    streamConnectionId = $(e).data('connectionid')
+    if streamConnectionId == @leader && @subscribers[ streamConnectionId ]
+      $(e).addClass( "OT_big" )
+      @subscribers[ streamConnectionId ].restrictFrameRate( false )
+    else
+      $(e).removeClass( "OT_big" )
+      if @subscribers[ streamConnectionId ]
+        @subscribers[ streamConnectionId ].restrictFrameRate( true )
   syncStreamsProperty: =>
     for e in $(".streamContainer")
+      @setLeaderProperties( e )
       streamConnectionId = $(e).data( 'connectionid' )
       if @filterData && @filterData[ streamConnectionId ]
         @applyClassFilter( @filterData[ streamConnectionId ], ".stream#{streamConnectionId}" )
+    if @myConnectionId == @leader
+      $("#myPublisherContainer").addClass( "OT_big" )
+    @layout()
   errorSignal: (error) =>
     if (error)
       console.log("signal error: " + error.reason)

@@ -30,6 +30,9 @@
       this.syncStreamsProperty = function() {
         return User.prototype.syncStreamsProperty.apply(_this, arguments);
       };
+      this.setLeaderProperties = function(e) {
+        return User.prototype.setLeaderProperties.apply(_this, arguments);
+      };
       this.inputKeypress = function(e) {
         return User.prototype.inputKeypress.apply(_this, arguments);
       };
@@ -78,6 +81,7 @@
       this.allUsers = {};
       this.printCommands();
       this.subscribers = {};
+      this.leader = false;
       this.layout = TB.initLayoutContainer(document.getElementById("streams_container"), {
         fixedRatio: true,
         animate: true,
@@ -88,7 +92,8 @@
       }).layout;
       this.publisher = TB.initPublisher(this.apiKey, "myPublisher", {
         width: "100%",
-        height: "100%"
+        height: "100%",
+        publishAudio: false
       });
       this.session = TB.initSession(this.sid);
       this.session.on("sessionConnected", this.sessionConnectedHandler);
@@ -195,7 +200,8 @@
           chat: this.chatData,
           filter: this.filterData,
           users: this.allUsers,
-          random: [1, 2, 3]
+          random: [1, 2, 3],
+          leader: this.leader
         }
       }, this.errorSignal);
       return console.log("signal new connection room info");
@@ -221,6 +227,7 @@
       if (this.initialized) {
         return;
       }
+      this.leader = event.data.leader;
       _ref = event.data.users;
       for (k in _ref) {
         v = _ref[k];
@@ -245,26 +252,15 @@
     };
 
     User.prototype.signalFocusHandler = function(event) {
-      var className, e, streamConnectionId, _i, _len, _ref;
-      if (event.data === this.myConnectionId) {
-        $("#myPublisherContainer").addClass("OT_big");
-      } else {
-        $("#myPublisherContainer").removeClass("OT_big");
-      }
+      var e, _i, _len, _ref;
+      this.leader = event.data;
       _ref = $(".streamContainer");
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         e = _ref[_i];
-        className = "stream" + event.data;
-        if ($(e).hasClass(className) && this.subscribers[event.data]) {
-          $(e).addClass("OT_big");
-          this.subscribers[event.data].restrictFrameRate(false);
-        } else {
-          streamConnectionId = $(e).data('connectionid');
-          if (this.subscribers[streamConnectionId]) {
-            $(e).removeClass("OT_big");
-            this.subscribers[streamConnectionId].restrictFrameRate(true);
-          }
-        }
+        this.setLeaderProperties(e);
+      }
+      if (this.myConnectionId === this.leader) {
+        $("#myPublisherContainer").addClass("OT_big");
       }
       this.layout();
       return this.writeChatData({
@@ -275,6 +271,7 @@
 
     User.prototype.signalUnfocusHandler = function(event) {
       var e, streamConnectionId, _i, _len, _ref;
+      this.leader = false;
       $("#myPublisherContainer").removeClass("OT_big");
       _ref = $(".streamContainer");
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -389,20 +386,35 @@
       return $('#messageInput').val('');
     };
 
-    User.prototype.syncStreamsProperty = function() {
-      var e, streamConnectionId, _i, _len, _ref, _results;
-      _ref = $(".streamContainer");
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        e = _ref[_i];
-        streamConnectionId = $(e).data('connectionid');
-        if (this.filterData && this.filterData[streamConnectionId]) {
-          _results.push(this.applyClassFilter(this.filterData[streamConnectionId], ".stream" + streamConnectionId));
-        } else {
-          _results.push(void 0);
+    User.prototype.setLeaderProperties = function(e) {
+      var streamConnectionId;
+      streamConnectionId = $(e).data('connectionid');
+      if (streamConnectionId === this.leader && this.subscribers[streamConnectionId]) {
+        $(e).addClass("OT_big");
+        return this.subscribers[streamConnectionId].restrictFrameRate(false);
+      } else {
+        $(e).removeClass("OT_big");
+        if (this.subscribers[streamConnectionId]) {
+          return this.subscribers[streamConnectionId].restrictFrameRate(true);
         }
       }
-      return _results;
+    };
+
+    User.prototype.syncStreamsProperty = function() {
+      var e, streamConnectionId, _i, _len, _ref;
+      _ref = $(".streamContainer");
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        e = _ref[_i];
+        this.setLeaderProperties(e);
+        streamConnectionId = $(e).data('connectionid');
+        if (this.filterData && this.filterData[streamConnectionId]) {
+          this.applyClassFilter(this.filterData[streamConnectionId], ".stream" + streamConnectionId);
+        }
+      }
+      if (this.myConnectionId === this.leader) {
+        $("#myPublisherContainer").addClass("OT_big");
+      }
+      return this.layout();
     };
 
     User.prototype.errorSignal = function(error) {
