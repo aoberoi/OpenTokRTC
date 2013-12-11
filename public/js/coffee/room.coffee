@@ -93,7 +93,6 @@ class User
     cid = "#{event.connections[0].id}"
     guestName = "Guest-#{cid.substring( cid.length - 8, cid.length )}"
     console.log "signaling over!"
-    console.log @allUsers
     @allUsers[cid] = guestName
     @writeChatData( {name: @name, text:"/serv #{guestName} has joined the room"  } )
     @session.signal( { type: "initialize", to: event.connection, data: {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3]}}, @errorSignal )
@@ -115,6 +114,7 @@ class User
     for e in event.data.chat
       @writeChatData( e )
     @initialized = true
+    @syncStreamsProperty()
   signalChatHandler: ( event ) =>
     @writeChatData( event.data )
   signalFocusHandler: ( event ) =>
@@ -151,7 +151,6 @@ class User
     @applyClassFilter( val.filter, ".stream#{val.cid}" )
   signalNameHandler: ( event ) =>
     console.log "name signal received"
-    console.log event.data
     oldName = @allUsers[ event.data[0] ]
     @allUsers[ event.data[0] ] = event.data[1]
     @writeChatData( {name: @allUsers[ event.data[0] ], text: "/serv #{oldName} is now known as #{@allUsers[ event.data[0] ]}" } )
@@ -194,6 +193,11 @@ class User
     $('#messageInput').val('')
 
   # helpers
+  syncStreamsProperty: =>
+    for e in $(".streamContainer")
+      streamConnectionId = $(e).data( 'connectionid' )
+      if @filterData && @filterData[ streamConnectionId ]
+        @applyClassFilter( @filterData[ streamConnectionId ], ".stream#{streamConnectionId}" )
   errorSignal: (error) =>
     if (error)
       console.log("signal error: " + error.reason)
@@ -214,7 +218,6 @@ class User
       divId = "stream#{streamConnectionId}"
       $("#streams_container").append( @userStreamTemplate({ id: divId, connectionId: streamConnectionId }) )
       @subscribers[ streamConnectionId ] = @session.subscribe( stream, divId , {width:"100%", height:"100%"} )
-      @applyClassFilter( @filterData[ streamConnectionId ], ".stream#{streamConnectionId}" )
 
       # bindings to mark offensive users
       divId$ = $(".#{divId}")
@@ -230,6 +233,7 @@ class User
         if confirm("Is this user being inappropriate? If so, we are sorry that you had to go through that. Click confirm to remove user")
           self.applyClassFilter("Blur", ".#{streamConnection}")
           self.session.forceDisconnect( streamConnection.split("stream")[1] )
+    @syncStreamsProperty()
   writeChatData: (val) =>
     @chatData.push( {name: val.name, text: unescape(val.text) } )
     text = val.text.split(' ')
