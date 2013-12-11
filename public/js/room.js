@@ -92,8 +92,7 @@
       }).layout;
       this.publisher = TB.initPublisher(this.apiKey, "myPublisher", {
         width: "100%",
-        height: "100%",
-        publishAudio: false
+        height: "100%"
       });
       this.session = TB.initSession(this.sid);
       this.session.on("sessionConnected", this.sessionConnectedHandler);

@@ -24,7 +24,7 @@ class User
     }).layout
 
     # set up OpenTok
-    @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:"100%", height:"100%", publishAudio: false} )
+    @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:"100%", height:"100%"} )
     @session = TB.initSession( @sid )
     @session.on( "sessionConnected", @sessionConnectedHandler )
     @session.on( "sessionDisconnected", @sessionDisconnectedHandler )
