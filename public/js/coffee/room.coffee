@@ -88,15 +88,13 @@ class User
       @removeStream( stream.connection.connectionId )
     @layout()
   connectionCreatedHandler: ( event ) =>
-    console.log "new connection created"
     cid = "#{event.connections[0].id}"
-    guestName = "Guest-#{cid.substring( cid.length - 8, cid.length )}"
-    console.log "signaling over!"
     if !@allUsers[cid]
+      guestName = "Guest-#{cid.substring( cid.length - 8, cid.length )}"
       @allUsers[cid] = guestName
-      @session.signal( { type: "initialize", to: event.connection, data: {
-        chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader
-      }}, @errorSignal )
+    @session.signal( { type: "initialize", to: event.connection, data: {
+      chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader
+    }}, @errorSignal )
     @displayChatMessage( @notifyTemplate( {message:"#{@allUsers[cid]} has joined the room"   } ) )
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connections[0].id}"
