@@ -141,6 +141,8 @@
     }
 
     User.prototype.sessionConnectedHandler = function(event) {
+      console.log("session connected");
+      this.subscribeStreams(event.streams);
       this.myConnectionId = this.session.connection.connectionId;
       this.name = "Guest-" + (this.myConnectionId.substring(this.myConnectionId.length - 8, this.myConnectionId.length));
       this.allUsers[this.myConnectionId] = this.name;

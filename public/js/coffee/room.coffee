@@ -62,6 +62,8 @@ class User
 
   # session and signaling events
   sessionConnectedHandler: (event) =>
+    console.log "session connected"
+    @subscribeStreams(event.streams)
     @myConnectionId = @session.connection.connectionId
     @name = "Guest-#{@myConnectionId.substring( @myConnectionId.length - 8, @myConnectionId.length )}"
     @allUsers[ @myConnectionId ] = @name
