@@ -141,15 +141,13 @@
     }
 
     User.prototype.sessionConnectedHandler = function(event) {
-      console.log("session connected");
-      this.subscribeStreams(event.streams);
-      this.session.publish(this.publisher);
-      this.layout();
       this.myConnectionId = this.session.connection.connectionId;
       this.name = "Guest-" + (this.myConnectionId.substring(this.myConnectionId.length - 8, this.myConnectionId.length));
       this.allUsers[this.myConnectionId] = this.name;
       $("#messageInput").removeAttr("disabled");
-      return $('#messageInput').focus();
+      $('#messageInput').focus();
+      this.session.publish(this.publisher);
+      return this.layout();
     };
 
     User.prototype.sessionDisconnectedHandler = function(event) {
@@ -187,22 +185,24 @@
       cid = "" + event.connections[0].id;
       guestName = "Guest-" + (cid.substring(cid.length - 8, cid.length));
       console.log("signaling over!");
-      this.allUsers[cid] = guestName;
-      this.writeChatData({
-        name: this.name,
-        text: "/serv " + guestName + " has joined the room"
-      });
-      this.session.signal({
-        type: "initialize",
-        to: event.connection,
-        data: {
-          chat: this.chatData,
-          filter: this.filterData,
-          users: this.allUsers,
-          random: [1, 2, 3],
-          leader: this.leader
-        }
-      }, this.errorSignal);
+      if (!this.allUsers[cid]) {
+        this.allUsers[cid] = guestName;
+        this.writeChatData({
+          name: this.name,
+          text: "/serv " + guestName + " has joined the room"
+        });
+        this.session.signal({
+          type: "initialize",
+          to: event.connection,
+          data: {
+            chat: this.chatData,
+            filter: this.filterData,
+            users: this.allUsers,
+            random: [1, 2, 3],
+            leader: this.leader
+          }
+        }, this.errorSignal);
+      }
       return console.log("signal new connection room info");
     };
 
