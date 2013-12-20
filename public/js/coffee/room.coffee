@@ -94,20 +94,18 @@ class User
     console.log "signaling over!"
     if !@allUsers[cid]
       @allUsers[cid] = guestName
-      @writeChatData( {name: @name, text:"/serv #{guestName} has joined the room"  } )
       @session.signal( { type: "initialize", to: event.connection, data: {
         chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader
       }}, @errorSignal )
-    console.log "signal new connection room info"
+    @displayChatMessage( @notifyTemplate( {message:"#{@allUsers[cid]} has joined the room"   } ) )
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connections[0].id}"
-    @writeChatData( {name: @name, text:"/serv #{@allUsers[cid]} has left the room"  } )
+    @displayChatMessage( @notifyTemplate( {message:"#{@allUsers[cid]} has left the room"   } ) )
     if @subscribers[ cid ]
       delete @subscribers[cid]
     delete @allUsers[cid]
   signalInitializeHandler: ( event ) =>
     console.log "initialize handler"
-    console.log event.data
     if @initialized then return
     @leader = event.data.leader
     for k,v of event.data.users
