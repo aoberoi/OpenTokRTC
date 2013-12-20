@@ -181,24 +181,22 @@
 
     User.prototype.connectionCreatedHandler = function(event) {
       var cid, guestName;
-      console.log("new connection created");
       cid = "" + event.connections[0].id;
-      guestName = "Guest-" + (cid.substring(cid.length - 8, cid.length));
-      console.log("signaling over!");
       if (!this.allUsers[cid]) {
+        guestName = "Guest-" + (cid.substring(cid.length - 8, cid.length));
         this.allUsers[cid] = guestName;
-        this.session.signal({
-          type: "initialize",
-          to: event.connection,
-          data: {
-            chat: this.chatData,
-            filter: this.filterData,
-            users: this.allUsers,
-            random: [1, 2, 3],
-            leader: this.leader
-          }
-        }, this.errorSignal);
       }
+      this.session.signal({
+        type: "initialize",
+        to: event.connection,
+        data: {
+          chat: this.chatData,
+          filter: this.filterData,
+          users: this.allUsers,
+          random: [1, 2, 3],
+          leader: this.leader
+        }
+      }, this.errorSignal);
       return this.displayChatMessage(this.notifyTemplate({
         message: "" + this.allUsers[cid] + " has joined the room"
       }));
