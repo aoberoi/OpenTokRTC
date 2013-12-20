@@ -187,10 +187,6 @@
       console.log("signaling over!");
       if (!this.allUsers[cid]) {
         this.allUsers[cid] = guestName;
-        this.writeChatData({
-          name: this.name,
-          text: "/serv " + guestName + " has joined the room"
-        });
         this.session.signal({
           type: "initialize",
           to: event.connection,
@@ -203,16 +199,17 @@
           }
         }, this.errorSignal);
       }
-      return console.log("signal new connection room info");
+      return this.displayChatMessage(this.notifyTemplate({
+        message: "" + this.allUsers[cid] + " has joined the room"
+      }));
     };
 
     User.prototype.connectionDestroyedHandler = function(event) {
       var cid;
       cid = "" + event.connections[0].id;
-      this.writeChatData({
-        name: this.name,
-        text: "/serv " + this.allUsers[cid] + " has left the room"
-      });
+      this.displayChatMessage(this.notifyTemplate({
+        message: "" + this.allUsers[cid] + " has left the room"
+      }));
       if (this.subscribers[cid]) {
         delete this.subscribers[cid];
       }
@@ -222,7 +219,6 @@
     User.prototype.signalInitializeHandler = function(event) {
       var e, k, v, _i, _len, _ref, _ref1, _ref2;
       console.log("initialize handler");
-      console.log(event.data);
       if (this.initialized) {
         return;
       }
