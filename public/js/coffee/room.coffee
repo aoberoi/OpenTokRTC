@@ -62,16 +62,14 @@ class User
 
   # session and signaling events
   sessionConnectedHandler: (event) =>
-    console.log "session connected"
-    @subscribeStreams(event.streams)
-    @session.publish( @publisher )
-    @layout()
-
     @myConnectionId = @session.connection.connectionId
     @name = "Guest-#{@myConnectionId.substring( @myConnectionId.length - 8, @myConnectionId.length )}"
     @allUsers[ @myConnectionId ] = @name
     $("#messageInput").removeAttr( "disabled" )
     $('#messageInput').focus()
+    @session.publish( @publisher )
+    @layout()
+
   sessionDisconnectedHandler: (event) =>
     console.log event.reason
     if( event.reason == "forceDisconnected" )
@@ -94,11 +92,12 @@ class User
     cid = "#{event.connections[0].id}"
     guestName = "Guest-#{cid.substring( cid.length - 8, cid.length )}"
     console.log "signaling over!"
-    @allUsers[cid] = guestName
-    @writeChatData( {name: @name, text:"/serv #{guestName} has joined the room"  } )
-    @session.signal( { type: "initialize", to: event.connection, data: {
-      chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader
-    }}, @errorSignal )
+    if !@allUsers[cid]
+      @allUsers[cid] = guestName
+      @writeChatData( {name: @name, text:"/serv #{guestName} has joined the room"  } )
+      @session.signal( { type: "initialize", to: event.connection, data: {
+        chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader
+      }}, @errorSignal )
     console.log "signal new connection room info"
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connections[0].id}"
