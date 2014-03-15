@@ -45,11 +45,15 @@ app.get("/:rid", function( req, res ){
   // find request format, json or html?
   var path = req.params.rid.split(".json");
   var rid = path[0];
+  var room_uppercase = rid.toUpperCase();
 
   // Generate sessionId if there are no existing session Id's
-  if( !rooms[rid.toUpperCase()] ){
-    OpenTokObject.createSession(function(sessionId){
-      rooms[rid.toUpperCase()] = sessionId;
+  if( !rooms[room_uppercase] ){
+    // check to see if user wants a p2p session
+    var session_property = ( room_uppercase.split('P2P').length > 1 ) ? {'p2p.preference': 'enabled'} : {'p2p.preference':'disabled'}
+
+    OpenTokObject.createSession( session_property, function(sessionId){
+      rooms[ room_uppercase ] = sessionId;
       returnRoomResponse( res, { rid: rid, sid: sessionId }, path[1]);
     });
   }else{
