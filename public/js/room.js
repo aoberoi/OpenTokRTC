@@ -465,7 +465,7 @@
         message: "-----------"
       }));
       this.displayChatMessage(this.notifyTemplate({
-        message: "Welcome to OpenTokRTC."
+        message: "Welcome to OpenTokRTC by TokBox"
       }));
       this.displayChatMessage(this.notifyTemplate({
         message: "Type /nick your_name to change your name"
@@ -488,7 +488,8 @@
       this.displayChatMessage(this.notifyTemplate({
         message: "-----------"
       }));
-      return $(".chatMessage:first").css("margin-top", $("#title").outerHeight() + "px");
+      $(".chatMessage:first").css("margin-top", $("#title").outerHeight() + "px");
+      return $(".chatMessage:contains('Welcome to OpenTokRTC')").find('em').css("color", "#000");
     };
 
     return User;
