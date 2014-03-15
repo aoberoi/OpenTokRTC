@@ -260,7 +260,7 @@ class User
     $('#displayChat')[0].scrollTop = $('#displayChat')[0].scrollHeight
   printCommands: ->
     @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
-    @displayChatMessage( @notifyTemplate( {message: "Welcome to OpenTokRTC."} ) )
+    @displayChatMessage( @notifyTemplate( {message: "Welcome to OpenTokRTC by TokBox"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /nick your_name to change your name"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /list to see list of users in the room"} ) )
     @displayChatMessage( @notifyTemplate( {message: "Type /help to see a list of commands"} ) )
@@ -269,4 +269,5 @@ class User
     @displayChatMessage( @notifyTemplate( {message: "Type /unfocus to put everybody on equal standing"} ) )
     @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
     $(".chatMessage:first").css("margin-top", $("#title").outerHeight()+"px")
+    $(".chatMessage:contains('Welcome to OpenTokRTC')").find('em').css("color", "#000")
 window.User = User
