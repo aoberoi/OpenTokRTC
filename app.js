@@ -64,7 +64,9 @@ app.get("/:rid", function( req, res ){
 function returnRoomResponse( res, data, json ){
   data.apiKey = OTKEY;
   data.token = OpenTokObject.generateToken( {session_id: data.sid, role:OpenTokLibrary.RoleConstants.MODERATOR} );
-  if( json == "" ){
+  if( json == "" ){ // empty string = json exists, undefined means json does not exist
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
     res.json( data );
   }else{
     res.render( 'room', data );
