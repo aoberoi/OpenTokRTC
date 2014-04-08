@@ -3,7 +3,7 @@
     "version":"0.0.3",
     "dependencies":{
       "express":"",
-      "opentok":"",
+      "opentok":"1.0.x",
       "ejs":""
     }
 }

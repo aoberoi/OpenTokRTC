@@ -52,7 +52,7 @@ app.get("/:rid", function( req, res ){
     // check to see if user wants a p2p session
     var session_property = ( room_uppercase.split('P2P').length > 1 ) ? {'p2p.preference': 'enabled'} : {'p2p.preference':'disabled'}
 
-    OpenTokObject.createSession( session_property, function(sessionId){
+    OpenTokObject.createSession( session_property, function(err, sessionId){
       rooms[ room_uppercase ] = sessionId;
       returnRoomResponse( res, { rid: rid, sid: sessionId }, path[1]);
     });
