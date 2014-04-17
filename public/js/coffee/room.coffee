@@ -14,7 +14,7 @@ class User
     @subscribers = {}
     @leader = false
 
-    @layout = TB.initLayoutContainer( document.getElementById( "streams_container"), {
+    @layout = OT.initLayoutContainer( document.getElementById( "streams_container"), {
       fixedRatio: true
       animate: true
       bigClass: "OT_big"
@@ -24,21 +24,26 @@ class User
     }).layout
 
     # set up OpenTok
-    @publisher = TB.initPublisher( @apiKey, "myPublisher", {width:"100%", height:"100%"} )
-    @session = TB.initSession( @sid )
-    @session.on( "sessionConnected", @sessionConnectedHandler )
-    @session.on( "sessionDisconnected", @sessionDisconnectedHandler )
-    @session.on( "streamCreated", @streamCreatedHandler )
-    @session.on( "streamDestroyed", @streamDestroyedHandler )
-    @session.on( "connectionCreated", @connectionCreatedHandler )
-    @session.on( "connectionDestroyed", @connectionDestroyedHandler )
-    @session.on( "signal:initialize", @signalInitializeHandler )
-    @session.on( "signal:chat", @signalChatHandler )
-    @session.on( "signal:focus", @signalFocusHandler )
-    @session.on( "signal:unfocus", @signalUnfocusHandler )
-    @session.on( "signal:filter", @signalFilterHandler )
-    @session.on( "signal:name", @signalNameHandler )
-    @session.connect( @apiKey, @token )
+    @publisher = OT.initPublisher( @apiKey, "myPublisher", {width:"100%", height:"100%"} )
+    @session = OT.initSession( @apiKey, @sid )
+    @session.on
+      "sessionDisconnected": @sessionDisconnectedHandler
+      "streamCreated": @streamCreatedHandler
+      "streamDestroyed": @streamDestroyedHandler
+      "connectionCreated": @connectionCreatedHandler
+      "connectionDestroyed": @connectionDestroyedHandler
+      "signal": @signalReceivedHandler
+    @session.connect @token, (err) =>
+      if( err )
+        alert "Unable to connect to session. Sorry"
+        return
+      @myConnectionId = @session.connection.connectionId
+      @name = "Guest-#{@myConnectionId.substring( @myConnectionId.length - 8, @myConnectionId.length )}"
+      @allUsers[ @myConnectionId ] = @name
+      @session.publish( @publisher )
+      @layout()
+      $("#messageInput").removeAttr( "disabled" )
+      $('#messageInput').focus()
 
     # add event listeners
     self = @
@@ -47,7 +52,7 @@ class User
       prop = $(@).data('value')
       self.applyClassFilter( prop, "#myPublisher" )
       $(@).addClass("optionSelected")
-      self.session.signal( {type: "filter", data: {cid: self.session.connection.connectionId, filter: prop }}, self.errorSignal )
+      self.sendSignal( "filter", {cid: self.session.connection.connectionId, filter: prop })
       self.filterData[self.session.connection.connectionId] = prop
     $('#chatroom').click ->
       $(".container").css( 'right', '0px' )
@@ -61,17 +66,6 @@ class User
       self.layout()
 
   # session and signaling events
-  sessionConnectedHandler: (event) =>
-    console.log "session connected"
-    @subscribeStreams(event.streams)
-    @myConnectionId = @session.connection.connectionId
-    @name = "Guest-#{@myConnectionId.substring( @myConnectionId.length - 8, @myConnectionId.length )}"
-    @allUsers[ @myConnectionId ] = @name
-    $("#messageInput").removeAttr( "disabled" )
-    $('#messageInput').focus()
-    @session.publish( @publisher )
-    @layout()
-
   sessionDisconnectedHandler: (event) =>
     console.log event.reason
     if( event.reason == "forceDisconnected" )
@@ -81,72 +75,91 @@ class User
     window.location = "/"
   streamCreatedHandler: (event) =>
     console.log "streamCreated"
-    @subscribeStreams(event.streams)
+    stream = event.stream
+    streamConnectionId = stream.connection.connectionId
+
+    # create new div container for stream, subscribe, apply filter
+    divId = "stream#{streamConnectionId}"
+    $("#streams_container").append( @userStreamTemplate({ id: divId, connectionId: streamConnectionId }) )
+    @subscribers[ streamConnectionId ] = @session.subscribe( stream, divId , {width:"100%", height:"100%"} )
+
+    # bindings to mark offensive users
+    divId$ = $(".#{divId}")
+    divId$.mouseenter ->
+      $(@).find('.flagUser').show()
+    divId$.mouseleave ->
+      $(@).find('.flagUser').hide()
+
+    # mark user as offensive
+    self = @
+    divId$.find('.flagUser').click ->
+      streamConnection = $(@).data('streamconnection')
+      if confirm("Is this user being inappropriate? If so, we are sorry that you had to go through that. Click confirm to remove user")
+        self.applyClassFilter("Blur", ".#{streamConnection}")
+        self.session.forceDisconnect( streamConnection.split("stream")[1] )
+    @syncStreamsProperty()
     @layout()
   streamDestroyedHandler: (event) =>
-    for stream in event.streams
-      if @session.connection.connectionId == stream.connection.connectionId
-        return
-      @removeStream( stream.connection.connectionId )
+    @removeStream( event.stream.connection.connectionId )
     @layout()
   connectionCreatedHandler: ( event ) =>
-    cid = "#{event.connections[0].id}"
+    cid = "#{event.connection.connectionId}"
     if !@allUsers[cid]
       guestName = "Guest-#{cid.substring( cid.length - 8, cid.length )}"
       @allUsers[cid] = guestName
-    @session.signal( { type: "initialize", to: event.connection, data: {
-      chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader
-    }}, @errorSignal )
+    @sendSignal( "initialize", {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader}, event.connection)
     @displayChatMessage( @notifyTemplate( {message:"#{@allUsers[cid]} has joined the room"   } ) )
   connectionDestroyedHandler: ( event ) =>
-    cid = "#{event.connections[0].id}"
+    cid = "#{event.connection.connectionId}"
     @displayChatMessage( @notifyTemplate( {message:"#{@allUsers[cid]} has left the room"   } ) )
     if @subscribers[ cid ]
       delete @subscribers[cid]
     delete @allUsers[cid]
-  signalInitializeHandler: ( event ) =>
-    console.log "initialize handler"
-    if @initialized then return
-    @leader = event.data.leader
-    for k,v of event.data.users
-      @allUsers[k] = v
-    for k,v of event.data.filter
-      @filterData[k] = v
-    for e in event.data.chat
-      @writeChatData( e )
-    @initialized = true
-    @syncStreamsProperty()
-  signalChatHandler: ( event ) =>
-    @writeChatData( event.data )
-  signalFocusHandler: ( event ) =>
-    # restrict frame rate - first handle publishers
-    @leader = event.data
-    for e in $(".streamContainer")
-      @setLeaderProperties( e )
-    if @myConnectionId == @leader
-      $("#myPublisherContainer").addClass( "OT_big" )
-    @layout()
-    @writeChatData( {name: @allUsers[event.data], text:"/serv #{@allUsers[event.data]} is leading the group. Everybody else's video bandwidth is restricted."  } )
-  signalUnfocusHandler: ( event ) =>
-    @leader = false
-    $("#myPublisherContainer").removeClass( "OT_big" )
-    for e in $(".streamContainer")
-      $(e).removeClass( "OT_big" )
-      streamConnectionId = $(e).data('connectionid')
-      if @subscribers[ streamConnectionId ]
-        @subscribers[ streamConnectionId ].restrictFrameRate( false )
-    @layout()
-    @writeChatData( {name: @allUsers[event.data], text:"/serv Everybody is now on equal standing. No one leading the group."  } )
-  signalFilterHandler: ( event ) =>
-    val = event.data
-    console.log "filter received"
-    @applyClassFilter( val.filter, ".stream#{val.cid}" )
-  signalNameHandler: ( event ) =>
-    console.log "name signal received"
-    oldName = @allUsers[ event.data[0] ]
-    @allUsers[ event.data[0] ] = event.data[1]
-    @writeChatData( {name: @allUsers[ event.data[0] ], text: "/serv #{oldName} is now known as #{@allUsers[ event.data[0] ]}" } )
-
+  signalReceivedHandler: ( event ) =>
+    console.log "hello world"
+    event.data = JSON.parse( event.data )
+    console.log event
+    switch event.type
+      when "signal:initialize"
+        console.log "initialize handler"
+        if @initialized then return
+        @leader = event.data.leader
+        for k,v of event.data.users
+          @allUsers[k] = v
+        for k,v of event.data.filter
+          @filterData[k] = v
+        for e in event.data.chat
+          @writeChatData( e )
+        @initialized = true
+        @syncStreamsProperty()
+      when "signal:chat"
+        @writeChatData( event.data )
+      when "signal:focus"
+        # restrict frame rate - first handle publishers
+        @leader = event.data
+        for e in $(".streamContainer")
+          @setLeaderProperties( e )
+        if @myConnectionId == @leader
+          $("#myPublisherContainer").addClass( "OT_big" )
+        @layout()
+        @writeChatData( {name: @allUsers[event.data], text:"/serv #{@allUsers[event.data]} is leading the group. Everybody else's video bandwidth is restricted."  } )
+      when "signal:unfocus"
+        @leader = false
+        $("#myPublisherContainer").removeClass( "OT_big" )
+        for e in $(".streamContainer")
+          $(e).removeClass( "OT_big" )
+          streamConnectionId = $(e).data('connectionid')
+          if @subscribers[ streamConnectionId ]
+            @subscribers[ streamConnectionId ].restrictFrameRate( false )
+        @layout()
+        @writeChatData( {name: @allUsers[event.data], text:"/serv Everybody is now on equal standing. No one leading the group."  } )
+      when "signal:filter"
+        val = event.data
+        @applyClassFilter( val.filter, ".stream#{val.cid}" )
+      when "signal:name"
+        oldName = @allUsers[ event.data[0] ]
+        @allUsers[ event.data[0] ] = event.data[1]
+        @writeChatData( {name: @allUsers[ event.data[0] ], text: "/serv #{oldName} is now known as #{@allUsers[ event.data[0] ]}" } )
   # events
   inputKeypress: (e) =>
     msgData = {}
@@ -167,24 +180,27 @@ class User
         for k,v of @allUsers
           @displayChatMessage( @notifyTemplate( {message: "- #{v}" } ) )
         @displayChatMessage( @notifyTemplate( {message: "-----------"} ) )
-        $('#messageInput').val('')
       when "/focus"
-        @session.signal( {type: "focus", data: @myConnectionId}, @errorSignal )
+        @sendSignal( "focus", @myConnectionId)
       when "/unfocus"
-        @session.signal( {type: "unfocus", data: @myConnectionId}, @errorSignal )
+        @sendSignal( "unfocus", @myConnectionId)
       when "/name", "/nick"
         for k, v of @allUsers
           if v == parts[1] or parts[1].length <= 2
             alert("Sorry, but that name has already been taken or is too short.")
             return
         @name = parts[1]
-        @session.signal( {type: "name", data: [@myConnectionId, @name]}, @errorSignal )
+        @sendSignal("name", [@myConnectionId, @name])
       else
-        msgData = {name: @name, text: text}
-        @session.signal( {type: "chat", data: msgData}, @errorSignal )
+        @sendSignal("chat", {name: @name, text: text})
     $('#messageInput').val('')
 
   # helpers
+  sendSignal: ( type, data, to ) =>
+    data = {type: type, data: JSON.stringify(data)}
+    if to? then data.to = to
+    @session.signal( data, @errorSignal )
+
   setLeaderProperties: ( e ) =>
     streamConnectionId = $(e).data('connectionid')
     if streamConnectionId == @leader && @subscribers[ @leader ]
@@ -215,31 +231,6 @@ class User
   removeStream: (cid) =>
     element$ = $(".stream#{cid}")
     element$.remove()
-  subscribeStreams: (streams) =>
-    for stream in streams
-      streamConnectionId = stream.connection.connectionId
-      if @session.connection.connectionId == streamConnectionId
-        return
-      # create new div container for stream, subscribe, apply filter
-      divId = "stream#{streamConnectionId}"
-      $("#streams_container").append( @userStreamTemplate({ id: divId, connectionId: streamConnectionId }) )
-      @subscribers[ streamConnectionId ] = @session.subscribe( stream, divId , {width:"100%", height:"100%"} )
-
-      # bindings to mark offensive users
-      divId$ = $(".#{divId}")
-      divId$.mouseenter ->
-        $(@).find('.flagUser').show()
-      divId$.mouseleave ->
-        $(@).find('.flagUser').hide()
-
-      # mark user as offensive
-      self = @
-      divId$.find('.flagUser').click ->
-        streamConnection = $(@).data('streamconnection')
-        if confirm("Is this user being inappropriate? If so, we are sorry that you had to go through that. Click confirm to remove user")
-          self.applyClassFilter("Blur", ".#{streamConnection}")
-          self.session.forceDisconnect( streamConnection.split("stream")[1] )
-    @syncStreamsProperty()
   writeChatData: (val) =>
     @chatData.push( {name: val.name, text: unescape(val.text) } )
     text = val.text.split(' ')
