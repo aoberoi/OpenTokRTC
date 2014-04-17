@@ -5,31 +5,26 @@
 
   User = (function() {
     function User(rid, apiKey, sid, token) {
-      var self;
+      var self,
+        _this = this;
       this.rid = rid;
       this.apiKey = apiKey;
       this.sid = sid;
       this.token = token;
       this.writeChatData = __bind(this.writeChatData, this);
-      this.subscribeStreams = __bind(this.subscribeStreams, this);
       this.removeStream = __bind(this.removeStream, this);
       this.applyClassFilter = __bind(this.applyClassFilter, this);
       this.errorSignal = __bind(this.errorSignal, this);
       this.syncStreamsProperty = __bind(this.syncStreamsProperty, this);
       this.setLeaderProperties = __bind(this.setLeaderProperties, this);
+      this.sendSignal = __bind(this.sendSignal, this);
       this.inputKeypress = __bind(this.inputKeypress, this);
-      this.signalNameHandler = __bind(this.signalNameHandler, this);
-      this.signalFilterHandler = __bind(this.signalFilterHandler, this);
-      this.signalUnfocusHandler = __bind(this.signalUnfocusHandler, this);
-      this.signalFocusHandler = __bind(this.signalFocusHandler, this);
-      this.signalChatHandler = __bind(this.signalChatHandler, this);
-      this.signalInitializeHandler = __bind(this.signalInitializeHandler, this);
+      this.signalReceivedHandler = __bind(this.signalReceivedHandler, this);
       this.connectionDestroyedHandler = __bind(this.connectionDestroyedHandler, this);
       this.connectionCreatedHandler = __bind(this.connectionCreatedHandler, this);
       this.streamDestroyedHandler = __bind(this.streamDestroyedHandler, this);
       this.streamCreatedHandler = __bind(this.streamCreatedHandler, this);
       this.sessionDisconnectedHandler = __bind(this.sessionDisconnectedHandler, this);
-      this.sessionConnectedHandler = __bind(this.sessionConnectedHandler, this);
       this.messageTemplate = Handlebars.compile($("#messageTemplate").html());
       this.userStreamTemplate = Handlebars.compile($("#userStreamTemplate").html());
       this.notifyTemplate = Handlebars.compile($("#notifyTemplate").html());
@@ -40,7 +35,7 @@
       this.printCommands();
       this.subscribers = {};
       this.leader = false;
-      this.layout = TB.initLayoutContainer(document.getElementById("streams_container"), {
+      this.layout = OT.initLayoutContainer(document.getElementById("streams_container"), {
         fixedRatio: true,
         animate: true,
         bigClass: "OT_big",
@@ -48,24 +43,32 @@
         bigFixedRatio: false,
         easing: "swing"
       }).layout;
-      this.publisher = TB.initPublisher(this.apiKey, "myPublisher", {
+      this.publisher = OT.initPublisher(this.apiKey, "myPublisher", {
         width: "100%",
         height: "100%"
       });
-      this.session = TB.initSession(this.sid);
-      this.session.on("sessionConnected", this.sessionConnectedHandler);
-      this.session.on("sessionDisconnected", this.sessionDisconnectedHandler);
-      this.session.on("streamCreated", this.streamCreatedHandler);
-      this.session.on("streamDestroyed", this.streamDestroyedHandler);
-      this.session.on("connectionCreated", this.connectionCreatedHandler);
-      this.session.on("connectionDestroyed", this.connectionDestroyedHandler);
-      this.session.on("signal:initialize", this.signalInitializeHandler);
-      this.session.on("signal:chat", this.signalChatHandler);
-      this.session.on("signal:focus", this.signalFocusHandler);
-      this.session.on("signal:unfocus", this.signalUnfocusHandler);
-      this.session.on("signal:filter", this.signalFilterHandler);
-      this.session.on("signal:name", this.signalNameHandler);
-      this.session.connect(this.apiKey, this.token);
+      this.session = OT.initSession(this.apiKey, this.sid);
+      this.session.on({
+        "sessionDisconnected": this.sessionDisconnectedHandler,
+        "streamCreated": this.streamCreatedHandler,
+        "streamDestroyed": this.streamDestroyedHandler,
+        "connectionCreated": this.connectionCreatedHandler,
+        "connectionDestroyed": this.connectionDestroyedHandler,
+        "signal": this.signalReceivedHandler
+      });
+      this.session.connect(this.token, function(err) {
+        if (err) {
+          alert("Unable to connect to session. Sorry");
+          return;
+        }
+        _this.myConnectionId = _this.session.connection.connectionId;
+        _this.name = "Guest-" + (_this.myConnectionId.substring(_this.myConnectionId.length - 8, _this.myConnectionId.length));
+        _this.allUsers[_this.myConnectionId] = _this.name;
+        _this.session.publish(_this.publisher);
+        _this.layout();
+        $("#messageInput").removeAttr("disabled");
+        return $('#messageInput').focus();
+      });
       self = this;
       $(".filterOption").click(function() {
         var prop;
@@ -73,13 +76,10 @@
         prop = $(this).data('value');
         self.applyClassFilter(prop, "#myPublisher");
         $(this).addClass("optionSelected");
-        self.session.signal({
-          type: "filter",
-          data: {
-            cid: self.session.connection.connectionId,
-            filter: prop
-          }
-        }, self.errorSignal);
+        self.sendSignal("filter", {
+          cid: self.session.connection.connectionId,
+          filter: prop
+        });
         return self.filterData[self.session.connection.connectionId] = prop;
       });
       $('#chatroom').click(function() {
@@ -98,18 +98,6 @@
       };
     }
 
-    User.prototype.sessionConnectedHandler = function(event) {
-      console.log("session connected");
-      this.subscribeStreams(event.streams);
-      this.myConnectionId = this.session.connection.connectionId;
-      this.name = "Guest-" + (this.myConnectionId.substring(this.myConnectionId.length - 8, this.myConnectionId.length));
-      this.allUsers[this.myConnectionId] = this.name;
-      $("#messageInput").removeAttr("disabled");
-      $('#messageInput').focus();
-      this.session.publish(this.publisher);
-      return this.layout();
-    };
-
     User.prototype.sessionDisconnectedHandler = function(event) {
       console.log(event.reason);
       if (event.reason === "forceDisconnected") {
@@ -121,42 +109,58 @@
     };
 
     User.prototype.streamCreatedHandler = function(event) {
+      var divId, divId$, self, stream, streamConnectionId;
       console.log("streamCreated");
-      this.subscribeStreams(event.streams);
+      stream = event.stream;
+      streamConnectionId = stream.connection.connectionId;
+      divId = "stream" + streamConnectionId;
+      $("#streams_container").append(this.userStreamTemplate({
+        id: divId,
+        connectionId: streamConnectionId
+      }));
+      this.subscribers[streamConnectionId] = this.session.subscribe(stream, divId, {
+        width: "100%",
+        height: "100%"
+      });
+      divId$ = $("." + divId);
+      divId$.mouseenter(function() {
+        return $(this).find('.flagUser').show();
+      });
+      divId$.mouseleave(function() {
+        return $(this).find('.flagUser').hide();
+      });
+      self = this;
+      divId$.find('.flagUser').click(function() {
+        var streamConnection;
+        streamConnection = $(this).data('streamconnection');
+        if (confirm("Is this user being inappropriate? If so, we are sorry that you had to go through that. Click confirm to remove user")) {
+          self.applyClassFilter("Blur", "." + streamConnection);
+          return self.session.forceDisconnect(streamConnection.split("stream")[1]);
+        }
+      });
+      this.syncStreamsProperty();
       return this.layout();
     };
 
     User.prototype.streamDestroyedHandler = function(event) {
-      var stream, _i, _len, _ref;
-      _ref = event.streams;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        stream = _ref[_i];
-        if (this.session.connection.connectionId === stream.connection.connectionId) {
-          return;
-        }
-        this.removeStream(stream.connection.connectionId);
-      }
+      this.removeStream(event.stream.connection.connectionId);
       return this.layout();
     };
 
     User.prototype.connectionCreatedHandler = function(event) {
       var cid, guestName;
-      cid = "" + event.connections[0].id;
+      cid = "" + event.connection.connectionId;
       if (!this.allUsers[cid]) {
         guestName = "Guest-" + (cid.substring(cid.length - 8, cid.length));
         this.allUsers[cid] = guestName;
       }
-      this.session.signal({
-        type: "initialize",
-        to: event.connection,
-        data: {
-          chat: this.chatData,
-          filter: this.filterData,
-          users: this.allUsers,
-          random: [1, 2, 3],
-          leader: this.leader
-        }
-      }, this.errorSignal);
+      this.sendSignal("initialize", {
+        chat: this.chatData,
+        filter: this.filterData,
+        users: this.allUsers,
+        random: [1, 2, 3],
+        leader: this.leader
+      }, event.connection);
       return this.displayChatMessage(this.notifyTemplate({
         message: "" + this.allUsers[cid] + " has joined the room"
       }));
@@ -164,7 +168,7 @@
 
     User.prototype.connectionDestroyedHandler = function(event) {
       var cid;
-      cid = "" + event.connections[0].id;
+      cid = "" + event.connection.connectionId;
       this.displayChatMessage(this.notifyTemplate({
         message: "" + this.allUsers[cid] + " has left the room"
       }));
@@ -174,90 +178,80 @@
       return delete this.allUsers[cid];
     };
 
-    User.prototype.signalInitializeHandler = function(event) {
-      var e, k, v, _i, _len, _ref, _ref1, _ref2;
-      console.log("initialize handler");
-      if (this.initialized) {
-        return;
+    User.prototype.signalReceivedHandler = function(event) {
+      var e, k, oldName, streamConnectionId, v, val, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
+      console.log("hello world");
+      event.data = JSON.parse(event.data);
+      console.log(event);
+      switch (event.type) {
+        case "signal:initialize":
+          console.log("initialize handler");
+          if (this.initialized) {
+            return;
+          }
+          this.leader = event.data.leader;
+          _ref = event.data.users;
+          for (k in _ref) {
+            v = _ref[k];
+            this.allUsers[k] = v;
+          }
+          _ref1 = event.data.filter;
+          for (k in _ref1) {
+            v = _ref1[k];
+            this.filterData[k] = v;
+          }
+          _ref2 = event.data.chat;
+          for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+            e = _ref2[_i];
+            this.writeChatData(e);
+          }
+          this.initialized = true;
+          return this.syncStreamsProperty();
+        case "signal:chat":
+          return this.writeChatData(event.data);
+        case "signal:focus":
+          this.leader = event.data;
+          _ref3 = $(".streamContainer");
+          for (_j = 0, _len1 = _ref3.length; _j < _len1; _j++) {
+            e = _ref3[_j];
+            this.setLeaderProperties(e);
+          }
+          if (this.myConnectionId === this.leader) {
+            $("#myPublisherContainer").addClass("OT_big");
+          }
+          this.layout();
+          return this.writeChatData({
+            name: this.allUsers[event.data],
+            text: "/serv " + this.allUsers[event.data] + " is leading the group. Everybody else's video bandwidth is restricted."
+          });
+        case "signal:unfocus":
+          this.leader = false;
+          $("#myPublisherContainer").removeClass("OT_big");
+          _ref4 = $(".streamContainer");
+          for (_k = 0, _len2 = _ref4.length; _k < _len2; _k++) {
+            e = _ref4[_k];
+            $(e).removeClass("OT_big");
+            streamConnectionId = $(e).data('connectionid');
+            if (this.subscribers[streamConnectionId]) {
+              this.subscribers[streamConnectionId].restrictFrameRate(false);
+            }
+          }
+          this.layout();
+          return this.writeChatData({
+            name: this.allUsers[event.data],
+            text: "/serv Everybody is now on equal standing. No one leading the group."
+          });
+        case "signal:filter":
+          val = event.data;
+          return this.applyClassFilter(val.filter, ".stream" + val.cid);
+        case "signal:name":
+          oldName = this.allUsers[event.data[0]];
+          this.allUsers[event.data[0]] = event.data[1];
+          return this.writeChatData({
+            name: this.allUsers[event.data[0]],
+            text: "/serv " + oldName + " is now known as " + this.allUsers[event.data[0]]
+          });
       }
-      this.leader = event.data.leader;
-      _ref = event.data.users;
-      for (k in _ref) {
-        v = _ref[k];
-        this.allUsers[k] = v;
-      }
-      _ref1 = event.data.filter;
-      for (k in _ref1) {
-        v = _ref1[k];
-        this.filterData[k] = v;
-      }
-      _ref2 = event.data.chat;
-      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-        e = _ref2[_i];
-        this.writeChatData(e);
-      }
-      this.initialized = true;
-      return this.syncStreamsProperty();
-    };
-
-    User.prototype.signalChatHandler = function(event) {
-      return this.writeChatData(event.data);
-    };
-
-    User.prototype.signalFocusHandler = function(event) {
-      var e, _i, _len, _ref;
-      this.leader = event.data;
-      _ref = $(".streamContainer");
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        e = _ref[_i];
-        this.setLeaderProperties(e);
-      }
-      if (this.myConnectionId === this.leader) {
-        $("#myPublisherContainer").addClass("OT_big");
-      }
-      this.layout();
-      return this.writeChatData({
-        name: this.allUsers[event.data],
-        text: "/serv " + this.allUsers[event.data] + " is leading the group. Everybody else's video bandwidth is restricted."
-      });
-    };
-
-    User.prototype.signalUnfocusHandler = function(event) {
-      var e, streamConnectionId, _i, _len, _ref;
-      this.leader = false;
-      $("#myPublisherContainer").removeClass("OT_big");
-      _ref = $(".streamContainer");
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        e = _ref[_i];
-        $(e).removeClass("OT_big");
-        streamConnectionId = $(e).data('connectionid');
-        if (this.subscribers[streamConnectionId]) {
-          this.subscribers[streamConnectionId].restrictFrameRate(false);
-        }
-      }
-      this.layout();
-      return this.writeChatData({
-        name: this.allUsers[event.data],
-        text: "/serv Everybody is now on equal standing. No one leading the group."
-      });
-    };
-
-    User.prototype.signalFilterHandler = function(event) {
-      var val;
-      val = event.data;
-      console.log("filter received");
-      return this.applyClassFilter(val.filter, ".stream" + val.cid);
-    };
-
-    User.prototype.signalNameHandler = function(event) {
-      var oldName;
-      console.log("name signal received");
-      oldName = this.allUsers[event.data[0]];
-      this.allUsers[event.data[0]] = event.data[1];
-      return this.writeChatData({
-        name: this.allUsers[event.data[0]],
-        text: "/serv " + oldName + " is now known as " + this.allUsers[event.data[0]]
-      });
     };
 
     User.prototype.inputKeypress = function(e) {
@@ -296,19 +290,12 @@
           this.displayChatMessage(this.notifyTemplate({
             message: "-----------"
           }));
-          $('#messageInput').val('');
           break;
         case "/focus":
-          this.session.signal({
-            type: "focus",
-            data: this.myConnectionId
-          }, this.errorSignal);
+          this.sendSignal("focus", this.myConnectionId);
           break;
         case "/unfocus":
-          this.session.signal({
-            type: "unfocus",
-            data: this.myConnectionId
-          }, this.errorSignal);
+          this.sendSignal("unfocus", this.myConnectionId);
           break;
         case "/name":
         case "/nick":
@@ -321,22 +308,26 @@
             }
           }
           this.name = parts[1];
-          this.session.signal({
-            type: "name",
-            data: [this.myConnectionId, this.name]
-          }, this.errorSignal);
+          this.sendSignal("name", [this.myConnectionId, this.name]);
           break;
         default:
-          msgData = {
+          this.sendSignal("chat", {
             name: this.name,
             text: text
-          };
-          this.session.signal({
-            type: "chat",
-            data: msgData
-          }, this.errorSignal);
+          });
       }
       return $('#messageInput').val('');
+    };
+
+    User.prototype.sendSignal = function(type, data, to) {
+      data = {
+        type: type,
+        data: JSON.stringify(data)
+      };
+      if (to != null) {
+        data.to = to;
+      }
+      return this.session.signal(data, this.errorSignal);
     };
 
     User.prototype.setLeaderProperties = function(e) {
@@ -389,43 +380,6 @@
       var element$;
       element$ = $(".stream" + cid);
       return element$.remove();
-    };
-
-    User.prototype.subscribeStreams = function(streams) {
-      var divId, divId$, self, stream, streamConnectionId, _i, _len;
-      for (_i = 0, _len = streams.length; _i < _len; _i++) {
-        stream = streams[_i];
-        streamConnectionId = stream.connection.connectionId;
-        if (this.session.connection.connectionId === streamConnectionId) {
-          return;
-        }
-        divId = "stream" + streamConnectionId;
-        $("#streams_container").append(this.userStreamTemplate({
-          id: divId,
-          connectionId: streamConnectionId
-        }));
-        this.subscribers[streamConnectionId] = this.session.subscribe(stream, divId, {
-          width: "100%",
-          height: "100%"
-        });
-        divId$ = $("." + divId);
-        divId$.mouseenter(function() {
-          return $(this).find('.flagUser').show();
-        });
-        divId$.mouseleave(function() {
-          return $(this).find('.flagUser').hide();
-        });
-        self = this;
-        divId$.find('.flagUser').click(function() {
-          var streamConnection;
-          streamConnection = $(this).data('streamconnection');
-          if (confirm("Is this user being inappropriate? If so, we are sorry that you had to go through that. Click confirm to remove user")) {
-            self.applyClassFilter("Blur", "." + streamConnection);
-            return self.session.forceDisconnect(streamConnection.split("stream")[1]);
-          }
-        });
-      }
-      return this.syncStreamsProperty();
     };
 
     User.prototype.writeChatData = function(val) {
