@@ -9,7 +9,7 @@ var OpenTokLibrary = require('opentok');
 // ***
 var OTKEY = process.env.TB_KEY;
 var OTSECRET = process.env.TB_SECRET;
-var OpenTokObject = new OpenTokLibrary.OpenTokSDK(OTKEY, OTSECRET);
+var OpenTokObject = new OpenTokLibrary(OTKEY, OTSECRET);
 
 // ***
 // *** Setup Express to handle static files in public folder
