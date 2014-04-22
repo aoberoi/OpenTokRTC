@@ -32,6 +32,11 @@ app.get('*', function(req, res, next) {
   next();
 });
 
+app.get(/.*\.json$/, function(req, res, next) {
+  req.format = 'json';
+  next();
+});
+
 // anything with p2p in the first path segment, has only one path segment, and can only end with
 // extension .json
 // NOTE: this can probably be done more readibly if we catch all requests and use the `path` module
@@ -56,9 +61,7 @@ var rooms = {};
 app.get("/:rid", function( req, res ){
   console.log( req.url );
 
-  // find request format, json or html?
-  var path = req.params.rid.split(".json");
-  var rid = path[0];
+  var rid = req.params.rid.split('.json')[0];
   var room_uppercase = rid.toUpperCase();
 
   // Generate sessionId if there are no existing session Id's
@@ -69,20 +72,20 @@ app.get("/:rid", function( req, res ){
       }
       console.log('opentok session generated:', session.sessionId);
       rooms[ room_uppercase ] = session.sessionId;
-      returnRoomResponse( res, { rid: rid, sid: session.sessionId }, path[1]);
+      returnRoomResponse( res, { rid: rid, sid: session.sessionId }, req.format);
     });
   }else{
-    returnRoomResponse( res, { rid: rid, sid: rooms[rid.toUpperCase()] }, path[1]);
+    returnRoomResponse( res, { rid: rid, sid: rooms[rid.toUpperCase()] }, req.format);
   }
 });
 
-function returnRoomResponse( res, data, json ){
+function returnRoomResponse(res, data, format) {
   data.apiKey = OTKEY;
   data.token = OpenTokObject.generateToken(data.sid, { role: 'moderator' });
-  if( json == "" ){ // empty string = json exists, undefined means json does not exist
-    res.json( data );
-  }else{
-    res.render( 'room', data );
+  if (format === 'json') {
+    res.json(data);
+  } else {
+    res.render('room', data);
   }
 }
 
