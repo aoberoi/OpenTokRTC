@@ -9,7 +9,7 @@ var OpenTokLibrary = require('opentok');
 // ***
 var OTKEY = process.env.TB_KEY;
 var OTSECRET = process.env.TB_SECRET;
-var OpenTokObject = new OpenTokLibrary.OpenTokSDK(OTKEY, OTSECRET);
+var OpenTokObject = new OpenTokLibrary(OTKEY, OTSECRET);
 
 // ***
 // *** Setup Express to handle static files in public folder
@@ -52,9 +52,13 @@ app.get("/:rid", function( req, res ){
     // check to see if user wants a p2p session
     var session_property = ( room_uppercase.split('P2P').length > 1 ) ? {'p2p.preference': 'enabled'} : {'p2p.preference':'disabled'}
 
-    OpenTokObject.createSession( session_property, function(err, sessionId){
-      rooms[ room_uppercase ] = sessionId;
-      returnRoomResponse( res, { rid: rid, sid: sessionId }, path[1]);
+    OpenTokObject.createSession( session_property, function(err, session){
+      if (err) {
+        return res.send(500, "could not generate opentok session");
+      }
+      console.log('opentok session generated:', session.sessionId);
+      rooms[ room_uppercase ] = session.sessionId;
+      returnRoomResponse( res, { rid: rid, sid: session.sessionId }, path[1]);
     });
   }else{
     returnRoomResponse( res, { rid: rid, sid: rooms[rid.toUpperCase()] }, path[1]);
@@ -63,7 +67,7 @@ app.get("/:rid", function( req, res ){
 
 function returnRoomResponse( res, data, json ){
   data.apiKey = OTKEY;
-  data.token = OpenTokObject.generateToken( {session_id: data.sid, role:OpenTokLibrary.RoleConstants.MODERATOR} );
+  data.token = OpenTokObject.generateToken(data.sid, { role: 'moderator' });
   if( json == "" ){ // empty string = json exists, undefined means json does not exist
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET');
