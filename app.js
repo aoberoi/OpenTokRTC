@@ -63,6 +63,7 @@ app.get("/:rid", function( req, res ){
     var data = {
       rid: rid,
       sid: sessionId,
+      sessionId: sessionId,
       apiKey : apiKey,
       token: token
     };
