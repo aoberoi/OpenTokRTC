@@ -20,6 +20,15 @@ app.set( 'views', __dirname + "/views");
 app.set( 'view engine', 'ejs' );
 app.use(express.static(__dirname + '/public'));
 
+
+// if we are in Heroku on production, and the request isn't over TLS, redirect.
+app.get('*', function(req, res, next) {
+  if (process.env.NODE_ENV === 'production' && req.header('x-forwarded-proto') !== 'https') {
+    return res.redirect('https://opentokrtc.com');
+  }
+  next();
+});
+
 // anything with p2p in the first path segment, has only one path segment, and can only end with
 // extension .json
 // NOTE: this can probably be done more readibly if we catch all requests and use the `path` module
@@ -36,23 +45,13 @@ app.get(/^\/.*p2p[^\/.]*(\.json)?$/, function(req, res, next) {
 // *** When user goes to root directory, render index page
 // ***
 app.get("/", function( req, res ){
-  // make sure that we are always in https
-  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
-    res.redirect( 'https://opentokrtc.com' );
-  }else{
-    res.render( 'index' );
-  }
+  res.render('index');
 });
 
 var rooms = {};
 
 app.get("/:rid", function( req, res ){
-  // make sure that we are always in https
   console.log( req.url );
-  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
-    res.redirect( 'https://opentokrtc.com'+req.url );
-    return;
-  }
 
   // find request format, json or html?
   var path = req.params.rid.split(".json");
