@@ -4,6 +4,7 @@
   "dependencies": {
     "express": "^4.0.0",
     "opentok": "opentok/opentok-node#cleaning-up",
-    "ejs": "^1.0.0"
+    "ejs": "^1.0.0",
+    "cors": "^2.2.0"
   }
 }
