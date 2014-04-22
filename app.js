@@ -4,6 +4,12 @@
 var express = require('express');
 var OpenTokLibrary = require('opentok');
 
+// middleware
+var cors = require('cors'),
+    tlsCheck = require('./lib/tls-check'),
+    format = require('./lib/format'),
+    p2pCheck = require('./lib/p2p-check');
+
 // ***
 // *** OpenTok Constants for creating Session and Token values
 // ***
@@ -16,66 +22,80 @@ var OpenTokObject = new OpenTokLibrary(OTKEY, OTSECRET);
 // *** Express is also great for handling url routing
 // ***
 var app = express();
-app.use(express.static(__dirname + '/public'));
 app.set( 'views', __dirname + "/views");
 app.set( 'view engine', 'ejs' );
+app.use(express.static(__dirname + '/public'));
+
+// ***
+// *** Load middleware
+// ***
+app.use(cors({methods:'GET'}));
+tlsCheck(app);
+format(app);
+p2pCheck(app);
+// reservations may or may not exist
+try {
+  var reservations = require('./lib/reservations');
+  reservations(app);
+} catch (err) {
+  if (err.code !== 'MODULE_NOT_FOUND') {
+    throw err;
+  }
+}
+
 
 // ***
 // *** When user goes to root directory, render index page
 // ***
 app.get("/", function( req, res ){
-  // make sure that we are always in https
-  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
-    res.redirect( 'https://opentokrtc.com' );
-  }else{
-    res.render( 'index' );
-  }
+  res.render('index');
 });
 
 var rooms = {};
 
 app.get("/:rid", function( req, res ){
-  // make sure that we are always in https
-  console.log( req.url );
-  if(req.header('x-forwarded-proto')!="https" && process.env.NODE_ENV == "production" ){
-    res.redirect( 'https://opentokrtc.com'+req.url );
-    return;
-  }
+  // final function to be called when all the necessary data is gathered
+  var sendRoomResponse = function(apiKey, sessionId, token) {
+    var data = {
+      rid: rid,
+      sid: sessionId,
+      apiKey : apiKey,
+      token: token
+    };
+    if (req.format === 'json') {
+      res.json(data);
+    } else {
+      res.render('room', data);
+    }
+  };
 
-  // find request format, json or html?
-  var path = req.params.rid.split(".json");
-  var rid = path[0];
+  console.log(req.url);
+
+  var rid = req.params.rid.split('.json')[0];
   var room_uppercase = rid.toUpperCase();
 
-  // Generate sessionId if there are no existing session Id's
-  if( !rooms[room_uppercase] ){
-    // check to see if user wants a p2p session
-    var session_property = ( room_uppercase.split('P2P').length > 1 ) ? {'p2p.preference': 'enabled'} : {'p2p.preference':'disabled'}
+  // When a room is given through a reservation
+  if (req.sessionId && req.apiKey && req.token) {
+    sendRoomResponse(req.apiKey, req.sessionId, req.token);
 
-    OpenTokObject.createSession( session_property, function(err, session){
+  // When a room has already been created
+  } else if (rooms[room_uppercase]) {
+    req.sessionId = rooms[room_uppercase];
+    sendRoomResponse(OTKEY, req.sessionId, OpenTokObject.generateToken(req.sessionId, {role: 'moderator'}));
+
+  // When a room needs to be created
+  } else {
+    OpenTokObject.createSession( req.sessionProperties || {} , function(err, session){
       if (err) {
         return res.send(500, "could not generate opentok session");
       }
       console.log('opentok session generated:', session.sessionId);
-      rooms[ room_uppercase ] = session.sessionId;
-      returnRoomResponse( res, { rid: rid, sid: session.sessionId }, path[1]);
+      rooms[room_uppercase] = session.sessionId;
+      sendRoomResponse(OTKEY, session.sessionId, OpenTokObject.generateToken(session.sessionId, {role: 'moderator'}));
     });
-  }else{
-    returnRoomResponse( res, { rid: rid, sid: rooms[rid.toUpperCase()] }, path[1]);
   }
 });
 
-function returnRoomResponse( res, data, json ){
-  data.apiKey = OTKEY;
-  data.token = OpenTokObject.generateToken(data.sid, { role: 'moderator' });
-  if( json == "" ){ // empty string = json exists, undefined means json does not exist
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET');
-    res.json( data );
-  }else{
-    res.render( 'room', data );
-  }
-}
 
 // ***
 // *** start server, listen to port (predefined or 9393)
