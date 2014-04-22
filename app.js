@@ -3,6 +3,7 @@
 // ***
 var express = require('express');
 var OpenTokLibrary = require('opentok');
+var cors = require('cors');
 
 // ***
 // *** OpenTok Constants for creating Session and Token values
@@ -20,6 +21,8 @@ app.set( 'views', __dirname + "/views");
 app.set( 'view engine', 'ejs' );
 app.use(express.static(__dirname + '/public'));
 
+
+app.use(cors({methods:'GET'}));
 
 // if we are in Heroku on production, and the request isn't over TLS, redirect.
 app.get('*', function(req, res, next) {
@@ -77,8 +80,6 @@ function returnRoomResponse( res, data, json ){
   data.apiKey = OTKEY;
   data.token = OpenTokObject.generateToken(data.sid, { role: 'moderator' });
   if( json == "" ){ // empty string = json exists, undefined means json does not exist
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET');
     res.json( data );
   }else{
     res.render( 'room', data );
