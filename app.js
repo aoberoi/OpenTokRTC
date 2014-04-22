@@ -16,9 +16,21 @@ var OpenTokObject = new OpenTokLibrary(OTKEY, OTSECRET);
 // *** Express is also great for handling url routing
 // ***
 var app = express();
-app.use(express.static(__dirname + '/public'));
 app.set( 'views', __dirname + "/views");
 app.set( 'view engine', 'ejs' );
+app.use(express.static(__dirname + '/public'));
+
+// anything with p2p in the first path segment, has only one path segment, and can only end with
+// extension .json
+// NOTE: this can probably be done more readibly if we catch all requests and use the `path` module
+// to structure the request for us. this approach favors utilizing express' routers existing logic.
+app.get(/^\/.*p2p[^\/.]*(\.json)?$/, function(req, res, next) {
+  console.log('a p2p room was requested');
+  if (!('sessionProperties' in req)) req.sessionProperties = {};
+  req.sessionProperties.p2p = true;
+  next();
+});
+
 
 // ***
 // *** When user goes to root directory, render index page
@@ -49,10 +61,7 @@ app.get("/:rid", function( req, res ){
 
   // Generate sessionId if there are no existing session Id's
   if( !rooms[room_uppercase] ){
-    // check to see if user wants a p2p session
-    var session_property = ( room_uppercase.split('P2P').length > 1 ) ? {'p2p.preference': 'enabled'} : {'p2p.preference':'disabled'}
-
-    OpenTokObject.createSession( session_property, function(err, session){
+    OpenTokObject.createSession( req.sessionProperties || {} , function(err, session){
       if (err) {
         return res.send(500, "could not generate opentok session");
       }
