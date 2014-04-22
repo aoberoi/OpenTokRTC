@@ -100,5 +100,5 @@ app.get("/:rid", function( req, res ){
 // ***
 // *** start server, listen to port (predefined or 9393)
 // ***
-var port = process.env.PORT || 5000;
+var port = process.env.PORT || 9393;
 app.listen(port);
