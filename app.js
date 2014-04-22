@@ -1,11 +1,10 @@
 // ***
 // *** Required modules
 // ***
-var express = require('express');
-var OpenTokLibrary = require('opentok');
-
-// middleware
-var cors = require('cors'),
+var express = require('express'),
+    opentok = require('opentok'),
+    // middleware
+    cors = require('cors'),
     tlsCheck = require('./lib/tls-check'),
     format = require('./lib/format'),
     p2pCheck = require('./lib/p2p-check');
@@ -13,9 +12,9 @@ var cors = require('cors'),
 // ***
 // *** OpenTok Constants for creating Session and Token values
 // ***
-var OTKEY = process.env.TB_KEY;
-var OTSECRET = process.env.TB_SECRET;
-var OpenTokObject = new OpenTokLibrary(OTKEY, OTSECRET);
+var OTKEY = process.env.TB_KEY,
+    OTSECRET = process.env.TB_SECRET,
+    ot = new opentok(OTKEY, OTSECRET);
 
 // ***
 // *** Setup Express to handle static files in public folder
@@ -43,6 +42,10 @@ try {
   }
 }
 
+// ***
+// *** Data structure to hold all existing rooms in memory
+// ***
+var rooms = {};
 
 // ***
 // *** When user goes to root directory, render index page
@@ -51,8 +54,9 @@ app.get("/", function( req, res ){
   res.render('index');
 });
 
-var rooms = {};
-
+// ***
+// *** When user goes to a room, render the room page
+// ***
 app.get("/:rid", function( req, res ){
   // final function to be called when all the necessary data is gathered
   var sendRoomResponse = function(apiKey, sessionId, token) {
@@ -81,17 +85,17 @@ app.get("/:rid", function( req, res ){
   // When a room has already been created
   } else if (rooms[room_uppercase]) {
     req.sessionId = rooms[room_uppercase];
-    sendRoomResponse(OTKEY, req.sessionId, OpenTokObject.generateToken(req.sessionId, {role: 'moderator'}));
+    sendRoomResponse(OTKEY, req.sessionId, ot.generateToken(req.sessionId, {role: 'moderator'}));
 
   // When a room needs to be created
   } else {
-    OpenTokObject.createSession( req.sessionProperties || {} , function(err, session){
+    ot.createSession( req.sessionProperties || {} , function(err, session){
       if (err) {
         return res.send(500, "could not generate opentok session");
       }
       console.log('opentok session generated:', session.sessionId);
       rooms[room_uppercase] = session.sessionId;
-      sendRoomResponse(OTKEY, session.sessionId, OpenTokObject.generateToken(session.sessionId, {role: 'moderator'}));
+      sendRoomResponse(OTKEY, session.sessionId, ot.generateToken(session.sessionId, {role: 'moderator'}));
     });
   }
 });
