@@ -56,10 +56,10 @@ class User
     $(".controlOption").click ->
       if $(@).hasClass('selected')
         $(@).removeClass('selected')
-        self.stopActivity( $(@).data('activity') )
+        self.triggerActivity( $(@).data('activity'), "stop" )
       else
         $(@).addClass('selected')
-        self.startActivity( $(@).data('activity') )
+        self.triggerActivity( $(@).data('activity'), "start" )
     $(".filterOption").click ->
       $(".filterOption").removeClass("selected")
       prop = $(@).data('value')
@@ -236,12 +236,13 @@ class User
   errorSignal: (error) =>
     if (error)
       console.log("signal error: " + error.reason)
-  startActivity: (activity) =>
+  triggerActivity: (activity, action) =>
     console.log "starting activity"
-    console.log activity
-  stopActivity: (activity) =>
-    console.log "ending activity"
-    console.log activity
+    switch activity
+      when "record"
+        $.post "/archive/#{@sid}", {action: action}, (response) =>
+          console.log "tried to start archive"
+          console.log response
   applyClassFilter: (prop, selector) =>
     if prop
       $(selector).removeClass( "Blur Sepia Grayscale Invert" )

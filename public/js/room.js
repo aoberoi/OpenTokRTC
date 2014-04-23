@@ -14,8 +14,7 @@
       this.writeChatData = __bind(this.writeChatData, this);
       this.removeStream = __bind(this.removeStream, this);
       this.applyClassFilter = __bind(this.applyClassFilter, this);
-      this.stopActivity = __bind(this.stopActivity, this);
-      this.startActivity = __bind(this.startActivity, this);
+      this.triggerActivity = __bind(this.triggerActivity, this);
       this.errorSignal = __bind(this.errorSignal, this);
       this.syncStreamsProperty = __bind(this.syncStreamsProperty, this);
       this.setLeaderProperties = __bind(this.setLeaderProperties, this);
@@ -83,10 +82,10 @@
       $(".controlOption").click(function() {
         if ($(this).hasClass('selected')) {
           $(this).removeClass('selected');
-          return self.stopActivity($(this).data('activity'));
+          return self.triggerActivity($(this).data('activity'), "stop");
         } else {
           $(this).addClass('selected');
-          return self.startActivity($(this).data('activity'));
+          return self.triggerActivity($(this).data('activity'), "start");
         }
       });
       $(".filterOption").click(function() {
@@ -387,14 +386,18 @@
       }
     };
 
-    User.prototype.startActivity = function(activity) {
+    User.prototype.triggerActivity = function(activity, action) {
+      var _this = this;
       console.log("starting activity");
-      return console.log(activity);
-    };
-
-    User.prototype.stopActivity = function(activity) {
-      console.log("ending activity");
-      return console.log(activity);
+      switch (activity) {
+        case "record":
+          return $.post("/archive/" + this.sid, {
+            action: action
+          }, function(response) {
+            console.log("tried to start archive");
+            return console.log(response);
+          });
+      }
     };
 
     User.prototype.applyClassFilter = function(prop, selector) {
