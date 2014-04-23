@@ -38,14 +38,21 @@
     </div>
   </div>
 
-  <div id="filterContainer">
-    <h1>Filters: </h1>
-    <div id="filterOptions">
-      <h1 class="filterOption" data-value="Blur">Blur</h1>
-      <h1 class="filterOption" data-value="Sepia">Sepia</h1>
-      <h1 class="filterOption" data-value="Grayscale" >Grayscale</h1>
-      <h1 class="filterOption" data-value="Invert" >Invert</h1>
-      <h1 class="filterOption optionSelected" data-value="None">None</h1>
+  <div id="controlsContainer">
+    <div class="controlsHeader">
+      <div class="headerOption selected" data-option="controlOptions">Control</div><div class="headerOption" data-option="filterOptions">Filters</div>
+    </div>
+    <div class="controlsBody">
+      <div id="controlOptions" class="optionContainer">
+        <h1 class="controlOption option" id="recordButton" data-activity="record">Record</h1>
+      </div>
+      <div id="filterOptions" class="optionContainer">
+        <h1 class="filterOption option" data-value="Blur">Blur</h1>
+        <h1 class="filterOption option" data-value="Sepia">Sepia</h1>
+        <h1 class="filterOption option" data-value="Grayscale" >Grayscale</h1>
+        <h1 class="filterOption option" data-value="Invert" >Invert</h1>
+        <h1 class="filterOption selected option" data-value="None">None</h1>
+      </div>
     </div>
   </div>
 </div>

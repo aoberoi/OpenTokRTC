@@ -14,6 +14,8 @@
       this.writeChatData = __bind(this.writeChatData, this);
       this.removeStream = __bind(this.removeStream, this);
       this.applyClassFilter = __bind(this.applyClassFilter, this);
+      this.stopActivity = __bind(this.stopActivity, this);
+      this.startActivity = __bind(this.startActivity, this);
       this.errorSignal = __bind(this.errorSignal, this);
       this.syncStreamsProperty = __bind(this.syncStreamsProperty, this);
       this.setLeaderProperties = __bind(this.setLeaderProperties, this);
@@ -70,12 +72,29 @@
         return $('#messageInput').focus();
       });
       self = this;
+      $(".headerOption").click(function() {
+        var option;
+        option = $(this).data('option');
+        $(".headerOption").removeClass("selected");
+        $(this).addClass("selected");
+        $(".optionContainer").hide();
+        return $(".optionContainer#" + option).show();
+      });
+      $(".controlOption").click(function() {
+        if ($(this).hasClass('selected')) {
+          $(this).removeClass('selected');
+          return self.stopActivity($(this).data('activity'));
+        } else {
+          $(this).addClass('selected');
+          return self.startActivity($(this).data('activity'));
+        }
+      });
       $(".filterOption").click(function() {
         var prop;
-        $(".filterOption").removeClass("optionSelected");
+        $(".filterOption").removeClass("selected");
         prop = $(this).data('value');
         self.applyClassFilter(prop, "#myPublisher");
-        $(this).addClass("optionSelected");
+        $(this).addClass("selected");
         self.sendSignal("filter", {
           cid: self.session.connection.connectionId,
           filter: prop
@@ -366,6 +385,16 @@
       if (error) {
         return console.log("signal error: " + error.reason);
       }
+    };
+
+    User.prototype.startActivity = function(activity) {
+      console.log("starting activity");
+      return console.log(activity);
+    };
+
+    User.prototype.stopActivity = function(activity) {
+      console.log("ending activity");
+      return console.log(activity);
     };
 
     User.prototype.applyClassFilter = function(prop, selector) {

@@ -47,11 +47,24 @@ class User
 
     # add event listeners
     self = @
+    $(".headerOption").click ->
+      option = $(@).data('option')
+      $(".headerOption").removeClass("selected")
+      $(@).addClass("selected")
+      $(".optionContainer").hide()
+      $(".optionContainer##{option}").show()
+    $(".controlOption").click ->
+      if $(@).hasClass('selected')
+        $(@).removeClass('selected')
+        self.stopActivity( $(@).data('activity') )
+      else
+        $(@).addClass('selected')
+        self.startActivity( $(@).data('activity') )
     $(".filterOption").click ->
-      $(".filterOption").removeClass("optionSelected")
+      $(".filterOption").removeClass("selected")
       prop = $(@).data('value')
       self.applyClassFilter( prop, "#myPublisher" )
-      $(@).addClass("optionSelected")
+      $(@).addClass("selected")
       self.sendSignal( "filter", {cid: self.session.connection.connectionId, filter: prop })
       self.filterData[self.session.connection.connectionId] = prop
     $('#chatroom').click ->
@@ -223,6 +236,12 @@ class User
   errorSignal: (error) =>
     if (error)
       console.log("signal error: " + error.reason)
+  startActivity: (activity) =>
+    console.log "starting activity"
+    console.log activity
+  stopActivity: (activity) =>
+    console.log "ending activity"
+    console.log activity
   applyClassFilter: (prop, selector) =>
     if prop
       $(selector).removeClass( "Blur Sepia Grayscale Invert" )
