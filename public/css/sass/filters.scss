@@ -22,44 +22,82 @@
 }
 
 
-#filterContainer{
-  border:1px solid #DDD;
-  height:43px;
+@mixin border-shadow($size) {
+  border:$size solid #DDD;
   box-sizing: border-box;
-  box-shadow: 1px 1px 3px #999 inset;
-  font-size:20px;
-  color: $hdrContrastColor;
-  padding-top:10px;
-  text-align:center;
+  box-shadow: $size $size 3px #999 inset;
+}
+
+
+// generic Container
+#controlsContainer{
   position:absolute;
   bottom: 0px;
   right: $chatRoomWidth;
   left: 0px;
-  background-color: #EEE;
-  h1{
-    display:inline;
+
+  .controlsHeader{
+    position: relative;
+    bottom: -1px;
     font-size: 20px;
-    line-height: 100%;
-    padding: 0 10px;
     color: $dark-gray;
     font-family: $avantFont;
     font-weight:normal;
+
+    @include border-shadow(1px);
+    display: inline-block;
+
+    .headerOption{
+      display: inline-block;
+      font-size:25px;
+      line-height: 150%;
+      cursor: pointer;
+      padding: 0 5px;
+      background-color: rgba( 255,255,255, 0.4 );
+
+      &.selected{
+        background-color: #EEE;
+      }
+    }
   }
-  #filterOptions{
-    display:inline;
-    .filterOption{
-      font-family: $avantFont;
-      font-weight:normal;
-      color: $light-gray;
-      cursor:pointer;
-      &:hover{
+
+  .controlsBody{
+    height:43px;
+    @include border-shadow(1px);
+    padding-top:10px;
+    text-align:center;
+    background-color: #EEE;
+
+    .optionContainer{
+      .option{
+        font-family: $avantFont;
+        font-size:20px;
+        line-height: 100%;
+        padding: 0 10px;
+        display:inline;
+        font-weight:normal;
+        color: $light-gray;
+        cursor:pointer;
+        &:hover{
+          background-color: $pink;
+          color: $white;
+        }
+      }
+
+      .selected{
         background-color: $pink;
         color: $white;
       }
+
+      #recordButton{
+        &.selected{
+          background-color: rgba( 255, 0, 0, 1 );
+        }
+      }
     }
-    .optionSelected{
-      background-color: $pink;
-      color: $white;
+
+    #filterOptions{
+      display:none;
     }
   }
 }
