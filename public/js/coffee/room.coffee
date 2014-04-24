@@ -120,7 +120,9 @@ class User
     if !@allUsers[cid]
       guestName = "Guest-#{cid.substring( cid.length - 8, cid.length )}"
       @allUsers[cid] = guestName
-    @sendSignal( "initialize", {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader}, event.connection)
+    dataToSend = {chat: @chatData, filter: @filterData, users: @allUsers, random:[1,2,3], leader: @leader}
+    if @archiveId? and $("#recordButton").hasClass("selected") then dataToSend.archiveId = @archiveId
+    @sendSignal( "initialize", dataToSend, event.connection)
     @displayChatMessage( @notifyTemplate( {message:"#{@allUsers[cid]} has joined the room"   } ) )
   connectionDestroyedHandler: ( event ) =>
     cid = "#{event.connection.connectionId}"
@@ -143,6 +145,9 @@ class User
           @filterData[k] = v
         for e in event.data.chat
           @writeChatData( e )
+        if event.data.archiveId?
+          @archiveId = event.data.archiveId
+          $("#recordButton").addClass("selected")
         @initialized = true
         @syncStreamsProperty()
       when "signal:chat"
@@ -173,6 +178,14 @@ class User
         oldName = @allUsers[ event.data[0] ]
         @allUsers[ event.data[0] ] = event.data[1]
         @writeChatData( {name: @allUsers[ event.data[0] ], text: "/serv #{oldName} is now known as #{@allUsers[ event.data[0] ]}" } )
+      when "signal:archive"
+        if event.data.action == "start"
+          actionVerb = "started"
+          $(".controlOption[data-activity=record]").addClass('selected')
+        else
+          actionVerb = "stopped"
+          $(".controlOption[data-activity=record]").removeClass('selected')
+        @writeChatData( {name:event.data.name, text: "/serv Archiving for this session has #{actionVerb}. View it here: #{window.location.origin}/archive/#{event.data.archiveId}/#{@rid}" } )
   # events
   inputKeypress: (e) =>
     msgData = {}
@@ -240,9 +253,14 @@ class User
     console.log "starting activity"
     switch activity
       when "record"
-        $.post "/archive/#{@sid}", {action: action}, (response) =>
+        data = {action: action, roomId: @rid} # room Id needed for room servation credentials on server
+        if @archiveId then data.archiveId = @archiveId
+        $.post "/archive/#{@sid}", data, (response) =>
           console.log "tried to start archive"
           console.log response
+          if response.id?
+            @archiveId = response.id
+            @sendSignal( "archive", {name: @name, archiveId: response.id, action:action})
   applyClassFilter: (prop, selector) =>
     if prop
       $(selector).removeClass( "Blur Sepia Grayscale Invert" )
@@ -254,9 +272,6 @@ class User
   writeChatData: (val) =>
     @chatData.push( {name: val.name, text: unescape(val.text) } )
     text = val.text.split(' ')
-    if text[0] == "/serv"
-      @displayChatMessage( @notifyTemplate( {message: val.text.split("/serv")[1] } ) )
-      return
     message = ""
     urlRegex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z]{2,6})(\/.*)?$/g
     for e in text
@@ -265,6 +280,9 @@ class User
       else
         message += Handlebars.Utils.escapeExpression(e) + " "
     val.text = message
+    if text[0] == "/serv"
+      @displayChatMessage( @notifyTemplate( {message: val.text.split("/serv")[1] } ) )
+      return
     @displayChatMessage( @messageTemplate( val ) )
   displayChatMessage: (message)->
     $("#displayChat").append message

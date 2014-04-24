@@ -166,19 +166,23 @@
     };
 
     User.prototype.connectionCreatedHandler = function(event) {
-      var cid, guestName;
+      var cid, dataToSend, guestName;
       cid = "" + event.connection.connectionId;
       if (!this.allUsers[cid]) {
         guestName = "Guest-" + (cid.substring(cid.length - 8, cid.length));
         this.allUsers[cid] = guestName;
       }
-      this.sendSignal("initialize", {
+      dataToSend = {
         chat: this.chatData,
         filter: this.filterData,
         users: this.allUsers,
         random: [1, 2, 3],
         leader: this.leader
-      }, event.connection);
+      };
+      if ((this.archiveId != null) && $("#recordButton").hasClass("selected")) {
+        dataToSend.archiveId = this.archiveId;
+      }
+      this.sendSignal("initialize", dataToSend, event.connection);
       return this.displayChatMessage(this.notifyTemplate({
         message: "" + this.allUsers[cid] + " has joined the room"
       }));
@@ -197,7 +201,7 @@
     };
 
     User.prototype.signalReceivedHandler = function(event) {
-      var e, k, oldName, streamConnectionId, v, val, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
+      var actionVerb, e, k, oldName, streamConnectionId, v, val, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
       console.log("hello world");
       event.data = JSON.parse(event.data);
       console.log(event);
@@ -222,6 +226,10 @@
           for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
             e = _ref2[_i];
             this.writeChatData(e);
+          }
+          if (event.data.archiveId != null) {
+            this.archiveId = event.data.archiveId;
+            $("#recordButton").addClass("selected");
           }
           this.initialized = true;
           return this.syncStreamsProperty();
@@ -268,6 +276,18 @@
           return this.writeChatData({
             name: this.allUsers[event.data[0]],
             text: "/serv " + oldName + " is now known as " + this.allUsers[event.data[0]]
+          });
+        case "signal:archive":
+          if (event.data.action === "start") {
+            actionVerb = "started";
+            $(".controlOption[data-activity=record]").addClass('selected');
+          } else {
+            actionVerb = "stopped";
+            $(".controlOption[data-activity=record]").removeClass('selected');
+          }
+          return this.writeChatData({
+            name: event.data.name,
+            text: "/serv Archiving for this session has " + actionVerb + ". View it here: " + window.location.origin + "/archive/" + event.data.archiveId + "/" + this.rid
           });
       }
     };
@@ -387,15 +407,29 @@
     };
 
     User.prototype.triggerActivity = function(activity, action) {
-      var _this = this;
+      var data,
+        _this = this;
       console.log("starting activity");
       switch (activity) {
         case "record":
-          return $.post("/archive/" + this.sid, {
-            action: action
-          }, function(response) {
+          data = {
+            action: action,
+            roomId: this.rid
+          };
+          if (this.archiveId) {
+            data.archiveId = this.archiveId;
+          }
+          return $.post("/archive/" + this.sid, data, function(response) {
             console.log("tried to start archive");
-            return console.log(response);
+            console.log(response);
+            if (response.id != null) {
+              _this.archiveId = response.id;
+              return _this.sendSignal("archive", {
+                name: _this.name,
+                archiveId: response.id,
+                action: action
+              });
+            }
           });
       }
     };
@@ -421,12 +455,6 @@
         text: unescape(val.text)
       });
       text = val.text.split(' ');
-      if (text[0] === "/serv") {
-        this.displayChatMessage(this.notifyTemplate({
-          message: val.text.split("/serv")[1]
-        }));
-        return;
-      }
       message = "";
       urlRegex = /(https?:\/\/)?([\da-z\.-]+)\.([a-z]{2,6})(\/.*)?$/g;
       for (_i = 0, _len = text.length; _i < _len; _i++) {
@@ -438,6 +466,12 @@
         }
       }
       val.text = message;
+      if (text[0] === "/serv") {
+        this.displayChatMessage(this.notifyTemplate({
+          message: val.text.split("/serv")[1]
+        }));
+        return;
+      }
       return this.displayChatMessage(this.messageTemplate(val));
     };
 
