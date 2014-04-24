@@ -3,6 +3,7 @@
 // ***
 var express = require('express'),
     opentok = require('opentok'),
+    bodyParser = require('body-parser'),
     // middleware
     cors = require('cors'),
     tlsCheck = require('./lib/tls-check'),
@@ -23,6 +24,7 @@ var OTKEY = process.env.TB_KEY,
 var app = express();
 app.set( 'views', __dirname + "/views");
 app.set( 'view engine', 'ejs' );
+app.use(bodyParser());
 app.use(express.static(__dirname + '/public'));
 
 // ***
@@ -32,6 +34,7 @@ app.use(cors({methods:'GET'}));
 tlsCheck(app);
 format(app);
 p2pCheck(app);
+
 // reservations may or may not exist
 try {
   var reservations = require('./lib/reservations');
@@ -52,6 +55,53 @@ var rooms = {};
 // ***
 app.get("/", function( req, res ){
   res.render('index');
+});
+
+// ***
+// *** Post endpoint to start/stop archives
+// ***
+app.post('/archive/:sessionId', function(req, res, next) {
+  // final function to be called when all the necessary data is gathered
+  function sendArchiveResponse(error, archive) {
+    if (error) {
+      res.json({error: error});
+    } else {
+      res.json(archive);
+    }
+  }
+
+  // When an archive is given through a reservation
+  if( req.archiveInfo ){
+    sendArchiveResponse( req.archiveInfo.error, req.archiveInfo.archive );
+    return;
+  }
+
+  // When an archive needs to be created or stopped
+  if( req.body.action === "start" ){
+    ot.startArchive(req.params.sessionId, {name: req.body.roomId}, sendArchiveResponse);
+  }else{
+    ot.stopArchive(req.body.archiveId, sendArchiveResponse);
+  }
+});
+
+// ***
+// *** Renders archive page
+// ***
+app.get('/archive/:archiveId/:roomId', function(req, res, next) {
+  // final function to be called when all the necessary data is gathered
+  function sendArchiveResponse(error, archive) {
+    data = error ? {error: error, archive: false} : {error: false, archive: archive}
+    res.render('archive', data);
+  }
+
+  // When an archive is given through a reservation
+  if( req.archiveInfo ){
+    sendArchiveResponse( req.archiveInfo.error, req.archiveInfo.archive );
+    return;
+  }
+
+  // When an archive needs to be created or stopped
+  ot.getArchive(req.params.archiveId, sendArchiveResponse);
 });
 
 // ***
