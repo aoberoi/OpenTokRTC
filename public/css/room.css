@@ -52,41 +52,58 @@
   -webkit-filter: Invert(100%);
   filter: Invert(100%); }
 
-#filterContainer {
-  border: 1px solid #DDD;
-  height: 43px;
-  box-sizing: border-box;
-  box-shadow: 1px 1px 3px #999 inset;
-  font-size: 20px;
-  color: white;
-  padding-top: 10px;
-  text-align: center;
+#controlsContainer {
   position: absolute;
   bottom: 0px;
   right: 400px;
-  left: 0px;
-  background-color: #EEE; }
-  #filterContainer h1 {
-    display: inline;
+  left: 0px; }
+  #controlsContainer .controlsHeader {
+    position: relative;
+    bottom: -1px;
     font-size: 20px;
-    line-height: 100%;
-    padding: 0 10px;
     color: #444444;
     font-family: "AvantGardeGothicITCW01X";
-    font-weight: normal; }
-  #filterContainer #filterOptions {
-    display: inline; }
-    #filterContainer #filterOptions .filterOption {
+    font-weight: normal;
+    border: 1px solid #dddddd;
+    box-sizing: border-box;
+    box-shadow: 1px 1px 3px #999999 inset;
+    display: inline-block; }
+    #controlsContainer .controlsHeader .headerOption {
+      display: inline-block;
+      font-size: 25px;
+      line-height: 150%;
+      cursor: pointer;
+      padding: 0 5px;
+      background-color: rgba(255, 255, 255, 0.4); }
+      #controlsContainer .controlsHeader .headerOption.selected {
+        background-color: #EEE; }
+  #controlsContainer .controlsBody {
+    height: 43px;
+    border: 1px solid #dddddd;
+    box-sizing: border-box;
+    box-shadow: 1px 1px 3px #999999 inset;
+    padding-top: 10px;
+    text-align: center;
+    background-color: #EEE; }
+    #controlsContainer .controlsBody .optionContainer .option {
       font-family: "AvantGardeGothicITCW01X";
+      font-size: 20px;
+      line-height: 100%;
+      padding: 0 10px;
+      display: inline;
       font-weight: normal;
       color: #999999;
       cursor: pointer; }
-      #filterContainer #filterOptions .filterOption:hover {
+      #controlsContainer .controlsBody .optionContainer .option:hover {
         background-color: #1ba3dd;
         color: white; }
-    #filterContainer #filterOptions .optionSelected {
+    #controlsContainer .controlsBody .optionContainer .selected {
       background-color: #1ba3dd;
       color: white; }
+    #controlsContainer .controlsBody .optionContainer #recordButton.selected {
+      background-color: red; }
+    #controlsContainer .controlsBody #filterOptions {
+      display: none; }
 
 /*
  * Mixins
