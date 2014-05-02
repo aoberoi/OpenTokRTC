@@ -1,14 +1,22 @@
 // ***
 // *** Required modules
 // ***
-var express = require('express'),
-    opentok = require('opentok'),
-    bodyParser = require('body-parser'),
-    // middleware
-    cors = require('cors'),
-    tlsCheck = require('./lib/tls-check'),
-    format = require('./lib/format'),
-    p2pCheck = require('./lib/p2p-check');
+var express    = require('express'),
+    opentok    = require('opentok'),
+    bodyParser = require('body-parser'), // middleware
+    cors       = require('cors'),
+    tlsCheck   = require('./lib/tls-check'),
+    format     = require('./lib/format'),
+    p2pCheck   = require('./lib/p2p-check');
+
+// Setup redis on heroku or dev
+if (process.env.REDISTOGO_URL) {
+  var rtg   = require("url").parse(process.env.REDISTOGO_URL);
+  var redisClient = require("redis").createClient(rtg.port, rtg.hostname);
+  redisClient.auth(rtg.auth.split(":")[1]);
+} else {
+  var redisClient = require("redis").createClient();
+}
 
 // ***
 // *** OpenTok Constants for creating Session and Token values
@@ -44,11 +52,6 @@ try {
     throw err;
   }
 }
-
-// ***
-// *** Data structure to hold all existing rooms in memory
-// ***
-var rooms = {};
 
 // ***
 // *** When user goes to root directory, render index page
@@ -132,21 +135,21 @@ app.get("/:rid", function( req, res ){
   // When a room is given through a reservation
   if (req.sessionId && req.apiKey && req.token) {
     sendRoomResponse(req.apiKey, req.sessionId, req.token);
-
-  // When a room has already been created
-  } else if (rooms[room_uppercase]) {
-    req.sessionId = rooms[room_uppercase];
-    sendRoomResponse(OTKEY, req.sessionId, ot.generateToken(req.sessionId, {role: 'moderator'}));
-
-  // When a room needs to be created
   } else {
-    ot.createSession( req.sessionProperties || {} , function(err, session){
-      if (err) {
-        return res.send(500, "could not generate opentok session");
+    // Check if room sessionId exists. If it does, render response. If not, create sessionId
+    redisClient.get(room_uppercase, function(err, reply){
+      if( reply ){
+        req.sessionId = reply;
+        sendRoomResponse(OTKEY, req.sessionId, ot.generateToken(req.sessionId, {role: 'moderator'}));
+      }else{
+        ot.createSession( req.sessionProperties || {} , function(err, session){
+          if (err) {
+            return res.send(500, "could not generate opentok session");
+          }
+          redisClient.set(room_uppercase, session.sessionId);
+          sendRoomResponse(OTKEY, session.sessionId, ot.generateToken(session.sessionId, {role: 'moderator'}));
+        });
       }
-      console.log('opentok session generated:', session.sessionId);
-      rooms[room_uppercase] = session.sessionId;
-      sendRoomResponse(OTKEY, session.sessionId, ot.generateToken(session.sessionId, {role: 'moderator'}));
     });
   }
 });
