@@ -233,6 +233,7 @@ User.prototype.signalReceived = function( event ){
         actionVerb = "stopped";
         $(".controlOption[data-activity=record]").removeClass('selected');
       }
+      this.archiveId = data.archiveId;
       var archiveUrl = window.location.origin +"/archive/"+data.archiveId+"/"+this.roomId;
       this.writeChatData( {name:data.name, text: "/serv Archiving for this session has "+actionVerb+". View it here: "+ archiveUrl});
       break;
@@ -344,7 +345,7 @@ User.prototype.triggerActivity = function(activity, action){
       }
       var self = this;
       $.post("/archive/"+this.sessionId, data, function(response){
-        console.log("tried to start archive");
+        console.log("trying to start archive");
         console.log(response);
         if(response.id){
           self.archiveId = response.id;
