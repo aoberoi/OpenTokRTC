@@ -80,8 +80,10 @@ function User(roomId, apiKey, sessionId, token){
     self.filterData[self.session.connection.connectionId] = prop;
   });
   $('#chatroom').click(function(){
+    if($(".container").css("right") !== "0px"){
+      $("#messageInput").focus();
+    }
     $(".container").css('right', '0px');
-    $("#messageInput").focus();
   });
   $('#messageInput').keypress(function(e){
     self.inputKeypress(e);
