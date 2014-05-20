@@ -5,25 +5,17 @@ var express    = require('express'),
     opentok    = require('opentok'),
     bodyParser = require('body-parser'), // middleware
     cors       = require('cors'),
+    config     = require("./config"),
+    storage    = require('./lib/store.js'),
     tlsCheck   = require('./lib/tls-check'),
     format     = require('./lib/format'),
     p2pCheck   = require('./lib/p2p-check');
 
-// Setup redis on heroku or dev
-if (process.env.REDISTOGO_URL) {
-  var rtg   = require("url").parse(process.env.REDISTOGO_URL);
-  var redisClient = require("redis").createClient(rtg.port, rtg.hostname);
-  redisClient.auth(rtg.auth.split(":")[1]);
-} else {
-  var redisClient = require("redis").createClient();
-}
-
 // ***
 // *** OpenTok Constants for creating Session and Token values
 // ***
-var OTKEY = process.env.TB_KEY,
-    OTSECRET = process.env.TB_SECRET,
-    ot = new opentok(OTKEY, OTSECRET);
+var OTKEY = config.opentok.key;
+var ot = new opentok(config.opentok.key, config.opentok.secret);
 
 // ***
 // *** Setup Express to handle static files in public folder
@@ -39,9 +31,10 @@ app.use(express.static(__dirname + '/public'));
 // *** Load middleware
 // ***
 app.use(cors({methods:'GET'}));
-tlsCheck(app);
-format(app);
-p2pCheck(app);
+storage.init(config);
+tlsCheck(app); // check for https redirect (if needed)
+format(app); // check for .json requests
+p2pCheck(app); // check for p2p
 
 // reservations may or may not exist
 try {
@@ -137,8 +130,8 @@ app.get("/:rid", function( req, res ){
     sendRoomResponse(req.apiKey, req.sessionId, req.token);
   } else {
     // Check if room sessionId exists. If it does, render response. If not, create sessionId
-    redisClient.get(room_uppercase, function(err, reply){
-      if( reply ){
+    storage.get(room_uppercase, function(reply){
+      if(reply){
         req.sessionId = reply;
         sendRoomResponse(OTKEY, req.sessionId, ot.generateToken(req.sessionId, {role: 'moderator'}));
       }else{
@@ -146,11 +139,13 @@ app.get("/:rid", function( req, res ){
           if (err) {
             return res.send(500, "could not generate opentok session");
           }
-          redisClient.set(room_uppercase, session.sessionId);
-          sendRoomResponse(OTKEY, session.sessionId, ot.generateToken(session.sessionId, {role: 'moderator'}));
+          storage.set(room_uppercase, session.sessionId, function(){
+            sendRoomResponse(OTKEY, session.sessionId, ot.generateToken(session.sessionId, {role: 'moderator'}));
+          });
         });
       }
     });
+
   }
 });
 
@@ -158,5 +153,4 @@ app.get("/:rid", function( req, res ){
 // ***
 // *** start server, listen to port (predefined or 9393)
 // ***
-var port = process.env.PORT || 9393;
-app.listen(port);
+app.listen(config.web.port);
