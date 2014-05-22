@@ -7,9 +7,7 @@ var express    = require('express'),
     cors       = require('cors'),
     config     = require("./config"),
     storage    = require('./lib/store.js'),
-    tlsCheck   = require('./lib/tls-check'),
-    format     = require('./lib/format'),
-    p2pCheck   = require('./lib/p2p-check');
+    loadMiddleware    = require('./lib/load-middleware.js');
 
 // ***
 // *** OpenTok Constants for creating Session and Token values
@@ -31,20 +29,8 @@ app.use(express.static(__dirname + '/public'));
 // *** Load middleware
 // ***
 app.use(cors({methods:'GET'}));
-storage.init(config);
-tlsCheck(app); // check for https redirect (if needed)
-format(app); // check for .json requests
-p2pCheck(app); // check for p2p
-
-// reservations may or may not exist
-try {
-  var reservations = require('./lib/reservations');
-  reservations(app);
-} catch (err) {
-  if (err.code !== 'MODULE_NOT_FOUND') {
-    throw err;
-  }
-}
+storage.init(config); // setup memory or redis, depending on config
+loadMiddleware(app, config);
 
 // ***
 // *** When user goes to root directory, render index page
