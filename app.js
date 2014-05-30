@@ -46,10 +46,17 @@ app.post('/archive/:sessionId', function(req, res, next) {
   // final function to be called when all the necessary data is gathered
   function sendArchiveResponse(error, archive) {
     if (error) {
-      res.json({error: error});
-    } else {
-      res.json(archive);
+      var payload;
+      if (config.web.env === 'development') {
+        payload = { error: error.message };
+      } else {
+        payload = { error: 'An error occurred, could not ' + req.body.action + ' the archive' };
+      }
+
+      return res.json(500, payload);
     }
+
+    res.json(archive);
   }
 
   // When an archive is given through a reservation
@@ -72,8 +79,24 @@ app.post('/archive/:sessionId', function(req, res, next) {
 app.get('/archive/:archiveId/:roomId', function(req, res, next) {
   // final function to be called when all the necessary data is gathered
   function sendArchiveResponse(error, archive) {
-    data = error ? {error: error, archive: false} : {error: false, archive: archive}
-    res.render('archive', data);
+    if (error) {
+      var payload;
+      if (config.web.env === 'development') {
+        payload = { error: error.message };
+      } else {
+        payload = { error: 'An error occurred, could not get the archive' };
+      }
+      // NOTE: see quirk note below. applies for this property as well.
+      payload.archive = false;
+
+      return res.json(500, payload);
+    }
+
+    // NOTE: sending 'error: false' in the response is unnecessary. this quirk should be removed
+    //       but if clients depend on this behavior then that needs to be changed across the
+    //       clients before making the change.
+    return res.render('archive', {error: false, archive: archive});
+
   }
 
   // When an archive is given through a reservation
@@ -123,8 +146,16 @@ app.get("/:rid", function( req, res ){
       }else{
         ot.createSession( req.sessionProperties || {} , function(err, session){
           if (err) {
-            return res.send(500, "could not generate opentok session");
+            var payload;
+            if (config.web.env === 'development') {
+              payload = { error: err.message };
+            } else {
+              payload = { error: 'could not generate opentok session' };
+            }
+
+            return res.send(500, payload);
           }
+
           storage.set(room_uppercase, session.sessionId, function(){
             sendRoomResponse(OTKEY, session.sessionId, ot.generateToken(session.sessionId, {role: 'moderator'}));
           });
@@ -139,4 +170,7 @@ app.get("/:rid", function( req, res ){
 // ***
 // *** start server, listen to port (predefined or 9393)
 // ***
-app.listen(config.web.port);
+app.listen(config.web.port, function() {
+  console.log('application now served on port ' + config.web.port +
+    ' in ' + config.web.env + ' environment');
+});
