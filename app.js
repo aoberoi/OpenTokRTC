@@ -13,7 +13,10 @@ var express    = require('express'),
 // *** OpenTok Constants for creating Session and Token values
 // ***
 var OTKEY = config.opentok.key;
-var ot = new opentok(config.opentok.key, config.opentok.secret);
+var ot = new opentok(config.opentok.key, config.opentok.secret, {
+  apiUrl: 'http://api.opentok.com',
+  proxy: 'http://128.123.6.60:3128'
+});
 
 // ***
 // *** Setup Express to handle static files in public folder

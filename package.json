@@ -4,7 +4,7 @@
   "dependencies": {
     "express": "^4.0.0",
     "body-parser":"*",
-    "opentok": "^2.2",
+    "opentok": "aoberoi/opentok-node#feat.proxy-support",
     "ejs": "^1.0.0",
     "redis": ">=0.10.1",
     "cors": "^2.2.0"
